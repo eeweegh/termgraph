@@ -5,7 +5,7 @@ clean:
 	rm -rf dist/*
 
 .PHONY: install
-	uv tool install termgraph
+	uv tool install .
 
 # Requirement
 # python3 -m pip install wheel
