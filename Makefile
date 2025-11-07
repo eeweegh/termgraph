@@ -1,10 +1,10 @@
 # Makefile for termgraph
 
-.PHONY: clean
+.PHONY: clean install
 clean:
 	rm -rf dist/*
 
-.PHONY: install
+install:
 	uv tool install .
 
 # Requirement
