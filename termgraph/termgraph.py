@@ -16,7 +16,7 @@ from colorama import init  # type: ignore
 import os
 import re
 
-VERSION = "0.5.4"
+VERSION = "1.0.0"
 
 init()
 
@@ -599,7 +599,7 @@ def chart(colors: List, data: List, args: Dict, labels: List) -> None:
 def check_data(labels: List, data: List, args: Dict) -> List:
     """Check that all data were inserted correctly. Return the colors."""
     if len(data) == 0:
-        sys.exit(0);
+        sys.exit(0)
 
     len_categories = len(data[0])
 
