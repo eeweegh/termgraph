@@ -1,0 +1,63 @@
+#!/usr/bin/env zsh
+
+#
+# tg: terminal graph driver
+# reads csv from stdin and displays a graph in terminal using termgraph
+#
+
+set -o errexit; set -o nounset; set -o pipefail
+
+_tg() {
+   tgsingle() {
+      # single category output
+      if [[ -t 1 ]]; then
+         # strip header to not confuse termgraph
+         # default width is a third of the terminal
+         xan behead | termgraph --color green --width $(($(tput cols) / 3)) "${@}"
+      else
+         # not going to a terminal, just passthrough csv
+         < /dev/stdin > /dev/stdout
+      fi
+   }
+   tgmultiple() {
+      # multiple categories
+      if [[ -t 1 ]]; then
+         # keep header, but replace first column with '@' for termgraph
+         # default width is 2/3 of the terminal
+         local width=$(($(tput cols) * 2 / 3))
+
+         xan rename --select 0 "@" | {
+            # stacked is default, unless overruled in env var (parameters are termgraph's)
+            if [[ -v TGNOSTACK ]] ; then
+               termgraph --width $width "${@}"
+            else
+               termgraph --stacked --width $width "${@}"
+            fi
+         }
+      else
+         # not going to a terminal, just passthrough csv
+         < /dev/stdin > /dev/stdout
+      fi
+   }
+
+   local temp="$(mktemp --suffix=tg)"
+
+   > ${temp}
+
+   if [[ -s ${temp} ]] ; then
+      # non empty data, assume csv
+      local -a columns=("${(@f)$(xan headers --just-names ${temp})}")
+
+      # hack to get even a single category shown, but not a simple count
+      if [[ ${#columns} -gt 2 || ${columns[2]} != "count" ]]; then
+         # a multicategory data file
+         < ${temp} tgmultiple "${@}"
+      else
+         < ${temp} tgsingle "${@}"
+      fi
+   fi
+
+   rm -f "${temp}"
+}
+
+_tg "${@}"
