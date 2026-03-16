@@ -1,33 +1,33 @@
 #!/usr/bin/env python3
-# coding=utf-8
 """This module allows drawing basic graphs in the terminal."""
 
 # termgraph.py - draw basic graphs on terminal
-# https://github.com/mkaz/termgraph
+# original source: https://github.com/mkaz/termgraph
 
-from __future__ import print_function, annotations
-from typing import List, Tuple, Dict
 import argparse
 import sys
 import math
 from datetime import datetime, timedelta
 from itertools import zip_longest
-from colorama import init  # type: ignore
+from colorama import init  # type: ignore[reportGeneralTypeIssues]
 import os
 import re
 import tomllib
+from pathlib import Path
+from typing import cast
 
 
 def get_version() -> str:
     try:
-        with open("pyproject.toml", "rb") as f:
-            return tomllib.load(f)["project"]["version"]
-    except Exception:
+        with Path("pyproject.toml").open("rb") as f:
+            return cast(str, tomllib.load(f)["project"]["version"])
+    except (FileNotFoundError, KeyError):
         return "UNKNOWN"
 
 
 VERSION = get_version()
 
+# colorama
 init()
 
 # 8 bit ANSI escape color codes, selenized
@@ -68,80 +68,77 @@ AVAILABLE_COLORS = {
 
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 UNITS = ["", "K", "M", "B", "T"]
-DELIM = ","
-# TICK = "▇"
+delimiter = ","
+# tick = "▇"
 # this one is nice '🟥' (from Unicode Geometric Shapes Block), but double charwidth, so needs correction in calculation
-TICK = "⣿"
-# SM_TICK = "▏"
-SM_TICK = "⡇"
-
-try:
-    range = xrange  # type: ignore
-except NameError:
-    pass
+tick: str = "⣿"
+# smalltick = "▏"
+smalltick: str = "⡇"
 
 
-def init_args() -> Dict:
+def init_args() -> dict:
     """Parse and return the arguments."""
     parser = argparse.ArgumentParser(description="draw basic graphs on terminal")
-    parser.add_argument(
+    _ = parser.add_argument(
         "filename",
         nargs="?",
         default="-",
         help="data file name (comma or space separated). Defaults to stdin.",
     )
-    parser.add_argument("--title", help="Title of graph")
-    parser.add_argument(
+    _ = parser.add_argument("--title", help="Title of graph")
+    _ = parser.add_argument(
         "--width", type=int, default=50, help="width of graph in characters default:50"
     )
-    parser.add_argument("--format", default="{:<5.2f}", help="format specifier to use.")
-    parser.add_argument(
+    _ = parser.add_argument(
+        "--format", default="{:<5.2f}", help="format specifier to use."
+    )
+    _ = parser.add_argument(
         "--suffix", default="", help="string to add as a suffix to all data points."
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--no-labels", action="store_true", help="Do not print the label column"
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--no-values", action="store_true", help="Do not print the values at end"
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--space-between",
         action="store_true",
         help="Print a new line after every field",
     )
-    parser.add_argument("--color", nargs="*", help="Graph bar color( s )")
-    parser.add_argument("--vertical", action="store_true", help="Vertical graph")
-    parser.add_argument("--stacked", action="store_true", help="Stacked bar graph")
-    parser.add_argument("--histogram", action="store_true", help="Histogram")
-    parser.add_argument("--bins", default=5, type=int, help="Bins of Histogram")
-    parser.add_argument(
+    _ = parser.add_argument("--color", nargs="*", help="Graph bar color( s )")
+    _ = parser.add_argument("--vertical", action="store_true", help="Vertical graph")
+    _ = parser.add_argument("--stacked", action="store_true", help="Stacked bar graph")
+    _ = parser.add_argument("--histogram", action="store_true", help="Histogram")
+    _ = parser.add_argument("--bins", default=5, type=int, help="Bins of Histogram")
+    _ = parser.add_argument(
         "--differentscale",
         action="store_true",
         help="Categories have different scales.",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--calendar", action="store_true", help="Calendar Heatmap chart"
     )
-    parser.add_argument("--start-dt", help="Start date for Calendar chart")
-    parser.add_argument(
+    _ = parser.add_argument("--start-dt", help="Start date for Calendar chart")
+    _ = parser.add_argument(
         "--custom-tick", default="", help="Custom tick mark, emoji approved"
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--delim", default="", help="Custom delimiter, default , or space"
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--verbose", action="store_true", help="Verbose output, helpful for debugging"
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--label-before",
         action="store_true",
         default=False,
         help="Display the values before the bars",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--version", action="store_true", help="Display version and exit"
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--colors", action="store_true", help="show color table used"
     )
     if len(sys.argv) == 1:
@@ -152,13 +149,13 @@ def init_args() -> Dict:
     args = vars(parser.parse_args())
 
     if args["custom_tick"] != "":
-        global TICK, SM_TICK
-        TICK = args["custom_tick"]
-        SM_TICK = ""
+        global tick, smalltick
+        tick = args["custom_tick"]
+        smalltick = ""
 
     if args["delim"] != "":
-        global DELIM
-        DELIM = args["delim"]
+        global delimiter
+        delimiter = args["delim"]
 
     return args
 
@@ -175,7 +172,7 @@ def main():
         for x in range(32):
             for y in range(8):
                 color = x * 8 + y
-                sys.stdout.write(f"\033[38:5:{color}m{color} ▇▇▇▇▇\033[0m  ")
+                _=sys.stdout.write(f"\033[38:5:{color}m{color} ▇▇▇▇▇\033[0m  ")
             print()
         sys.exit()
 
@@ -189,17 +186,17 @@ def main():
         pass
 
 
-def find_min(data: List):
+def find_min(data: list):
     """Return the minimum value in sublist of list."""
     return min([min(sublist) for sublist in data])
 
 
-def find_max(data: List):
+def find_max(data: list):
     """Return the maximum value in sublist of list."""
     return max([sum(sublist) for sublist in data])
 
 
-def normalize(data: List, width: int) -> List:
+def normalize(data: list, width: int) -> list:
     """Normalize the data and return it."""
 
     # We offset by the minimum if there's a negative.
@@ -230,7 +227,7 @@ def normalize(data: List, width: int) -> List:
         return normal_data
 
 
-def find_max_label_length(labels: List) -> int:
+def find_max_label_length(labels: list) -> int:
     """Return the maximum length for the labels."""
     return max([len(label) for label in labels])
 
@@ -263,7 +260,7 @@ def cvt_to_readable(num):
     return (newNum, degree)
 
 
-def hist_rows(data: List, args: Dict, colors: List):
+def hist_rows(data: list, args: dict, colors: list):
     """Prepare the Histgram graph.
     Each row is printed through the print_row function."""
 
@@ -325,11 +322,11 @@ def hist_rows(data: List, args: Dict, colors: List):
 
 
 def horiz_rows(
-    labels: List,
-    data: List,
-    normal_dat: List,
-    args: Dict,
-    colors: List,
+    labels: list,
+    data: list,
+    normal_dat: list,
+    args: dict,
+    colors: list,
     doprint: bool = True,
 ):
     """Prepare the horizontal graph.
@@ -421,10 +418,10 @@ def print_row(
     ):
         # Print something if it's not the smallest
         # and the normal value is less than one.
-        sys.stdout.write(SM_TICK)
+        sys.stdout.write(smalltick)
     else:
         for _ in range(num_blocks):
-            sys.stdout.write(TICK)
+            sys.stdout.write(tick)
 
     if color:
         sys.stdout.write("\033[0m")  # Back to original.
@@ -434,12 +431,12 @@ def print_row(
 
 
 def stacked_graph(
-    labels: List,
-    data: List,
-    normal_data: List,
+    labels: list,
+    data: list,
+    normal_data: list,
     len_categories: int,
-    args: Dict,
-    colors: List,
+    args: dict,
+    colors: list,
 ):
     """Prepare the horizontal stacked graph.
     Each row is printed through the print_row function."""
@@ -471,7 +468,7 @@ def stacked_graph(
 value_list, zipped_list, vertical_list, maxi = [], [], [], 0
 
 
-def vertically(value, num_blocks: int, val_min: int, color: bool, args: Dict) -> List:
+def vertically(value, num_blocks: int, val_min: int, color: bool, args: dict) -> list:
     """Prepare the vertical graph.
     The whole graph is printed through the print_vertical function."""
     global maxi, value_list
@@ -484,9 +481,9 @@ def vertically(value, num_blocks: int, val_min: int, color: bool, args: Dict) ->
         maxi = num_blocks
 
     if num_blocks > 0:
-        vertical_list.append((TICK * num_blocks))
+        vertical_list.append((tick * num_blocks))
     else:
-        vertical_list.append(SM_TICK)
+        vertical_list.append(smalltick)
 
     # Zip_longest method in order to turn them vertically.
     for row in zip_longest(*vertical_list, fillvalue=" "):
@@ -511,7 +508,7 @@ def vertically(value, num_blocks: int, val_min: int, color: bool, args: Dict) ->
     return result_list
 
 
-def print_vertical(vertical_rows: List, labels: List, color: bool, args: Dict) -> None:
+def print_vertical(vertical_rows: list, labels: list, color: bool, args: dict) -> None:
     """Print the whole vertical graph."""
     if color:
         sys.stdout.write(
@@ -535,7 +532,7 @@ def print_vertical(vertical_rows: List, labels: List, color: bool, args: Dict) -
             print("  ".join(label))
 
 
-def chart(colors: List, data: List, args: Dict, labels: List) -> None:
+def chart(colors: list, data: list, args: dict, labels: list) -> None:
     """Handle the normalization of data and the printing of the graph."""
     len_categories = len(data[0])
     if len_categories > 0:
@@ -612,7 +609,7 @@ def chart(colors: List, data: List, args: Dict, labels: List) -> None:
         print()
 
 
-def check_data(labels: List, data: List, args: Dict) -> List:
+def check_data(labels: list, data: list, args: dict) -> list:
     """Check that all data were inserted correctly. Return the colors."""
     if len(data) == 0:
         sys.exit(0)
@@ -678,7 +675,7 @@ def check_data(labels: List, data: List, args: Dict) -> List:
     return colors
 
 
-def print_categories(categories: List, colors: List, args: Dict) -> None:
+def print_categories(categories: list, colors: list, args: dict) -> None:
     """Print a tick and the category's name for each category above
     the graph."""
     sofar: int = 0
@@ -688,7 +685,7 @@ def print_categories(categories: List, colors: List, args: Dict) -> None:
                 f"\033[38:5:{colors[i % len(colors)]}m"
             )  # Start to write colorized.
 
-        sys.stdout.write(TICK + " " + categories[i] + " ")
+        sys.stdout.write(tick + " " + categories[i] + " ")
 
         if colors:
             sys.stdout.write("\033[0m")  # Back to original.
@@ -701,7 +698,7 @@ def print_categories(categories: List, colors: List, args: Dict) -> None:
     print("\n")
 
 
-def read_data(args: Dict) -> Tuple[List, List, List, List]:
+def read_data(args: dict) -> tuple[list, list, list, list]:
     """Read data from a file or stdin and returns it.
 
     Filename includes (categories), labels and data.
@@ -733,11 +730,11 @@ def read_data(args: Dict) -> Tuple[List, List, List, List]:
             line = line.strip()
             if line:
                 if not line.startswith("#"):
-                    if line.find(DELIM) > 0:
+                    if line.find(delimiter) > 0:
                         # https://stackoverflow.com/questions/2785755/how-to-split-but-ignore-separators-in-quoted-strings-in-python
                         # remove delimiters, but only when not within quotes, and part of the column header
                         cols = re.split(
-                            DELIM + """(?=(?:[^'"]|'[^']*'|"[^"]*")*$)""", line
+                            delimiter + """(?=(?:[^'"]|'[^']*'|"[^"]*")*$)""", line
                         )
                     else:
                         cols = line.split()
@@ -780,7 +777,7 @@ def read_data(args: Dict) -> Tuple[List, List, List, List]:
     return categories, labels, data, colors
 
 
-def calendar_heatmap(data: Dict, labels: List, args: Dict) -> None:
+def calendar_heatmap(data: list, labels: list, args: dict) -> None:
     """Print a calendar heatmap."""
     if args["color"]:
         colornum = AVAILABLE_COLORS.get(args["color"][0])
