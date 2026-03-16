@@ -1,9 +1,13 @@
 # Makefile for termgraph
 
-.PHONY: clean install update
+.PHONY: ignore clean install update
+
+ignore:
+	@echo "This is a Makefile for termgraph. Use 'make install' to install the tool, 'make update' to update it, and 'make clean' to uninstall it."
 
 clean:
-	rm -rf dist/ build/ termgraph.egg-info/ ~/.local/bin/tg
+	uv tool uninstall termgraph
+	rm -f ${HOME}/.local/bin/tg
 
 install:
 	uv tool install .
@@ -13,22 +17,3 @@ update:
 	uv tool upgrade termgraph
 	install -v -D --mode=755 --target-directory=${HOME}/.local/bin bin/tg
 
-# Requirement
-# python3 -m pip install wheel
-# .PHONY: build
-# build: clean
-# 	python3 setup.py sdist
-# 	python3 setup.py bdist_wheel
-
-
-# Publish
-# Requires: python3 -m pip install twine
-# .PHONY: publish
-# publish: build
-# 	twine upload dist/*
-
-# Test
-# Requires: python3 -m pip install pytest pytest-sugar
-# .PHONY: test
-# test:
-# 	py.test tests/
