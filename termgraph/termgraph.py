@@ -16,7 +16,8 @@ from colorama import init  # type: ignore
 import os
 import re
 
-VERSION = "1.0.1"
+# should come from setup.py
+VERSION = "1.0.4"
 
 init()
 
@@ -662,16 +663,23 @@ def check_data(labels: List, data: List, args: Dict) -> List:
     return colors
 
 
-def print_categories(categories: List, colors: List) -> None:
+def print_categories(categories: List, colors: List, args: Dict) -> None:
     """Print a tick and the category's name for each category above
     the graph."""
+    sofar : int = 0
     for i in range(len(categories)):
         if colors:
             sys.stdout.write(f"\033[38:5:{colors[i%len(colors)]}m")  # Start to write colorized.
 
-        sys.stdout.write(TICK + " " + categories[i] + "  ")
+        sys.stdout.write(TICK + " " + categories[i] + " ")
+
         if colors:
             sys.stdout.write("\033[0m")  # Back to original.
+
+        sofar += len(categories[i]) + 2
+        if sofar > args["width"]:
+            sys.stdout.write("\n")
+            sofar = 0
 
     print("\n")
 
@@ -748,7 +756,7 @@ def read_data(args: Dict) -> Tuple[List, List, List, List]:
     colors = check_data(labels, data, args)
     if categories:
         # Print categories' names above the graph.
-        print_categories(categories, colors)
+        print_categories(categories, colors, args)
 
     return categories, labels, data, colors
 
