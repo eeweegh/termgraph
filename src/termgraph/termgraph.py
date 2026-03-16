@@ -15,54 +15,63 @@ from itertools import zip_longest
 from colorama import init  # type: ignore
 import os
 import re
+import tomllib
 
-# should come from setup.py
-VERSION = "1.0.4"
+
+def get_version() -> str:
+    try:
+        with open("pyproject.toml", "rb") as f:
+            return tomllib.load(f)["project"]["version"]
+    except Exception:
+        return "UNKNOWN"
+
+
+VERSION = get_version()
 
 init()
 
 # 8 bit ANSI escape color codes, selenized
 AVAILABLE_COLORS = {
-        "green": 2,
-        "red": 1,
-        "yellow": 3,
-        "blue": 4,
-        "magenta": 5,
-        "cyan": 6,
-        "grey": 7,
-        "black": 0,
-        "brightblack": 8,
-        "brightred": 9,
-        "brightgreen": 10,
-        "brightyellow": 11,
-        "brightblue": 12,
-        "brightmagenta": 13,
-        "brightcyan": 14,
-        "brightwhite": 15,
-        "24": 24,
-        "25": 25,
-        "26": 26,
-        "27": 27,
-        "28": 28,
-        "29": 29,
-        "30": 30,
-        "31": 31,
-        "32": 32,
-        "33": 33,
-        "34": 34,
-        "35": 35,
-        "36": 36,
-        "37": 37,
-        "38": 38,
-        "39": 39
-        }
+    "green": 2,
+    "red": 1,
+    "yellow": 3,
+    "blue": 4,
+    "magenta": 5,
+    "cyan": 6,
+    "grey": 7,
+    "black": 0,
+    "brightblack": 8,
+    "brightred": 9,
+    "brightgreen": 10,
+    "brightyellow": 11,
+    "brightblue": 12,
+    "brightmagenta": 13,
+    "brightcyan": 14,
+    "brightwhite": 15,
+    "24": 24,
+    "25": 25,
+    "26": 26,
+    "27": 27,
+    "28": 28,
+    "29": 29,
+    "30": 30,
+    "31": 31,
+    "32": 32,
+    "33": 33,
+    "34": 34,
+    "35": 35,
+    "36": 36,
+    "37": 37,
+    "38": 38,
+    "39": 39,
+}
 
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 UNITS = ["", "K", "M", "B", "T"]
 DELIM = ","
 # TICK = "▇"
 # this one is nice '🟥' (from Unicode Geometric Shapes Block), but double charwidth, so needs correction in calculation
-TICK = '⣿'
+TICK = "⣿"
 # SM_TICK = "▏"
 SM_TICK = "⡇"
 
@@ -132,6 +141,9 @@ def init_args() -> Dict:
     parser.add_argument(
         "--version", action="store_true", help="Display version and exit"
     )
+    parser.add_argument(
+        "--colors", action="store_true", help="show color table used"
+    )
     if len(sys.argv) == 1:
         if sys.stdin.isatty():
             parser.print_usage()
@@ -157,6 +169,9 @@ def main():
 
     if args["version"]:
         print("termgraph v{}".format(VERSION), os.name)
+        sys.exit()
+
+    if args["colors"]:
         for x in range(32):
             for y in range(8):
                 color = x * 8 + y
@@ -237,7 +252,7 @@ def cvt_to_readable(num):
         index = math.floor(math.log(num) / math.log(1000))
 
         # Converts the number to the human readable format and returns it.
-        newNum = round(num / (1000 ** index), 3)
+        newNum = round(num / (1000**index), 3)
         newNum *= -1 if neg else 1
         degree = UNITS[index]
 
@@ -500,7 +515,7 @@ def print_vertical(vertical_rows: List, labels: List, color: bool, args: Dict) -
     """Print the whole vertical graph."""
     if color:
         sys.stdout.write(
-                "\033[38:5:{color}m".format(color=color)
+            "\033[38:5:{color}m".format(color=color)
         )  # Start to write colorized.
 
     for row in vertical_rows:
@@ -566,7 +581,7 @@ def chart(colors: List, data: List, args: Dict, labels: List) -> None:
 
     if args["histogram"]:
         if args["vertical"]:
-            print(">> Error: Vertical graph for Histogram" " is not supported yet.")
+            print(">> Error: Vertical graph for Histogram is not supported yet.")
             sys.exit(1)
 
         for row in hist_rows(data, args, colors):
@@ -666,10 +681,12 @@ def check_data(labels: List, data: List, args: Dict) -> List:
 def print_categories(categories: List, colors: List, args: Dict) -> None:
     """Print a tick and the category's name for each category above
     the graph."""
-    sofar : int = 0
+    sofar: int = 0
     for i in range(len(categories)):
         if colors:
-            sys.stdout.write(f"\033[38:5:{colors[i%len(colors)]}m")  # Start to write colorized.
+            sys.stdout.write(
+                f"\033[38:5:{colors[i % len(colors)]}m"
+            )  # Start to write colorized.
 
         sys.stdout.write(TICK + " " + categories[i] + " ")
 
@@ -719,17 +736,19 @@ def read_data(args: Dict) -> Tuple[List, List, List, List]:
                     if line.find(DELIM) > 0:
                         # https://stackoverflow.com/questions/2785755/how-to-split-but-ignore-separators-in-quoted-strings-in-python
                         # remove delimiters, but only when not within quotes, and part of the column header
-                        cols = re.split(DELIM+'''(?=(?:[^'"]|'[^']*'|"[^"]*")*$)''', line)
+                        cols = re.split(
+                            DELIM + """(?=(?:[^'"]|'[^']*'|"[^"]*")*$)""", line
+                        )
                     else:
                         cols = line.split()
 
                     # Line contains categories.
                     if line.startswith("@"):
-                        categories = [ e.strip(" \"") for e in cols[1:]]
+                        categories = [e.strip(' "') for e in cols[1:]]
 
                     # Line contains label and values.
                     else:
-                        labels.append(cols[0].strip(" \""))
+                        labels.append(cols[0].strip(' "'))
                         data_points = []
                         for i in range(1, len(cols)):
                             s = cols[i].strip()
