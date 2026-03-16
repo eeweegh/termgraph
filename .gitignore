@@ -1,13 +1,10 @@
-*.pyc
-venv/
-.vim/
-.vscode/
-.coverage
-htmlcov/
-dist/
+# Python-generated files
+__pycache__/
+*.py[oc]
 build/
-termgraph.egg-info/
-.coverage
-htmlcov/
-.python-version
-.vimrc
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv

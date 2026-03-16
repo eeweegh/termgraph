@@ -3,7 +3,7 @@
 .PHONY: clean install update
 
 clean:
-	rm -rf dist/* ~/.local/bin/tg
+	rm -rf dist/ build/ termgraph.egg-info/ ~/.local/bin/tg
 
 install:
 	uv tool install .
