@@ -1,11 +1,16 @@
 # Makefile for termgraph
 
-.PHONY: clean install
+.PHONY: clean install update
+
 clean:
 	rm -rf dist/* ~/.local/bin/tg
 
 install:
 	uv tool install .
+	install -v -D --mode=755 --target-directory=${HOME}/.local/bin bin/tg
+
+update:
+	uv tool upgrade termgraph
 	install -v -D --mode=755 --target-directory=${HOME}/.local/bin bin/tg
 
 # Requirement

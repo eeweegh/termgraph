@@ -16,7 +16,7 @@ from colorama import init  # type: ignore
 import os
 import re
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 init()
 
@@ -445,7 +445,7 @@ def stacked_graph(
         num_blocks = normal_data[i]
 
         for j in range(len(values)):
-            print_row(values[j], int(num_blocks[j]), val_min, colors[j])
+            print_row(values[j], int(num_blocks[j]), val_min, colors[j % len(colors)])
 
         tail = " {}{}".format(args["format"].format(sum(values)), args["suffix"])
         print(tail)
@@ -545,7 +545,7 @@ def chart(colors: List, data: List, args: Dict, labels: List) -> None:
 
                 # Generate data for a row.
                 for row in horiz_rows(
-                    labels, cat_data, normal_cat_data, args, [colors[i]]
+                    labels, cat_data, normal_cat_data, args, [colors[i % len(colors)]]
                 ):
                     # Print the row
                     if args["vertical"]:
@@ -557,7 +557,7 @@ def chart(colors: List, data: List, args: Dict, labels: List) -> None:
                 # The above gathers data for vertical and does not print
                 # the final print happens at once here
                 if args["vertical"]:
-                    print_vertical(vertic, labels, colors[i], args)
+                    print_vertical(vertic, labels, colors[i % len(colors)], args)
 
                 print()
                 value_list.clear(), zipped_list.clear(), vertical_list.clear()
@@ -667,7 +667,7 @@ def print_categories(categories: List, colors: List) -> None:
     the graph."""
     for i in range(len(categories)):
         if colors:
-            sys.stdout.write(f"\033[38:5:{colors[i]}m")  # Start to write colorized.
+            sys.stdout.write(f"\033[38:5:{colors[i%len(colors)]}m")  # Start to write colorized.
 
         sys.stdout.write(TICK + " " + categories[i] + "  ")
         if colors:
