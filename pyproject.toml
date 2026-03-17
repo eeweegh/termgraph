@@ -1,15 +1,14 @@
 [project]
 name = "termgraph"
-version = "1.3.0"
+version = "1.3.4"
 description = "terminal graphing"
 readme = "README.md"
 authors = [
-    { name = "Erik Wybouw", email = "erik.wybouw@telenetgroup.be" }
+    { name = "Erik Wybouw", email = "erik.wybouw@telenetgroup.be" },
+    { name = "mkaz", email = "marcus@mkaz.com" }
 ]
 requires-python = ">=3.12"
-dependencies = [
-    "colorama>=0.4.6",
-]
+dependencies = []
 
 [project.scripts]
 termgraph = "termgraph.termgraph:main"

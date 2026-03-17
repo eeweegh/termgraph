@@ -1,206 +1,85 @@
 #!/usr/bin/env python3
 """This module allows drawing basic graphs in the terminal."""
 
-# termgraph.py - draw basic graphs on terminal
 # original source: https://github.com/mkaz/termgraph
 
 import argparse
 import sys
-import math
-from datetime import datetime, timedelta
-from itertools import zip_longest
-from colorama import init  # type: ignore[reportGeneralTypeIssues]
 import os
 import re
-import tomllib
-from pathlib import Path
+
 from typing import cast
 
-
-def get_version() -> str:
-    try:
-        with Path("pyproject.toml").open("rb") as f:
-            return cast(str, tomllib.load(f)["project"]["version"])
-    except (FileNotFoundError, KeyError):
-        return "UNKNOWN"
+from .utils import get_version, DELIMITER, TICK, SMALLTICK, COLORS, print_row, cvt_to_readable
+from .utils import Number, ArgsType
 
 
-VERSION = get_version()
 
-# colorama
-init()
-
-# 8 bit ANSI escape color codes, selenized
-AVAILABLE_COLORS = {
-    "green": 2,
-    "red": 1,
-    "yellow": 3,
-    "blue": 4,
-    "magenta": 5,
-    "cyan": 6,
-    "grey": 7,
-    "black": 0,
-    "brightblack": 8,
-    "brightred": 9,
-    "brightgreen": 10,
-    "brightyellow": 11,
-    "brightblue": 12,
-    "brightmagenta": 13,
-    "brightcyan": 14,
-    "brightwhite": 15,
-    "24": 24,
-    "25": 25,
-    "26": 26,
-    "27": 27,
-    "28": 28,
-    "29": 29,
-    "30": 30,
-    "31": 31,
-    "32": 32,
-    "33": 33,
-    "34": 34,
-    "35": 35,
-    "36": 36,
-    "37": 37,
-    "38": 38,
-    "39": 39,
-}
-
-DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-UNITS = ["", "K", "M", "B", "T"]
-delimiter = ","
-# tick = "▇"
-# this one is nice '🟥' (from Unicode Geometric Shapes Block), but double charwidth, so needs correction in calculation
-tick: str = "⣿"
-# smalltick = "▏"
-smalltick: str = "⡇"
+""" globals
+"""
+delimiter: str = DELIMITER
+tick: str = TICK
+smalltick: str = SMALLTICK
 
 
-def init_args() -> dict:
+
+def init_args() -> ArgsType:
     """Parse and return the arguments."""
     parser = argparse.ArgumentParser(description="draw basic graphs on terminal")
-    _ = parser.add_argument(
-        "filename",
-        nargs="?",
-        default="-",
-        help="data file name (comma or space separated). Defaults to stdin.",
-    )
+
+    _ = parser.add_argument("filename", nargs="?", default="-", help="data file name (comma or space separated). Defaults to stdin.")
     _ = parser.add_argument("--title", help="Title of graph")
-    _ = parser.add_argument(
-        "--width", type=int, default=50, help="width of graph in characters default:50"
-    )
-    _ = parser.add_argument(
-        "--format", default="{:<5.2f}", help="format specifier to use."
-    )
-    _ = parser.add_argument(
-        "--suffix", default="", help="string to add as a suffix to all data points."
-    )
-    _ = parser.add_argument(
-        "--no-labels", action="store_true", help="Do not print the label column"
-    )
-    _ = parser.add_argument(
-        "--no-values", action="store_true", help="Do not print the values at end"
-    )
-    _ = parser.add_argument(
-        "--space-between",
-        action="store_true",
-        help="Print a new line after every field",
-    )
-    _ = parser.add_argument("--color", nargs="*", help="Graph bar color( s )")
-    _ = parser.add_argument("--vertical", action="store_true", help="Vertical graph")
+    _ = parser.add_argument("--width", type=int, default=50, help="width of graph in characters default:50")
+    _ = parser.add_argument("--format", default="{:<5.2f}", help="format specifier to use.")
+    _ = parser.add_argument("--suffix", default="", help="string to add as a suffix to all data points.")
+    _ = parser.add_argument("--no-labels", action="store_true", help="Do not print the label column")
+    _ = parser.add_argument("--no-values", action="store_true", help="Do not print the values at end")
+    _ = parser.add_argument("--space-between", action="store_true", help="Print a new line after every field",)
+    _ = parser.add_argument("--color", nargs="*", help="Graph bar color(s)")
     _ = parser.add_argument("--stacked", action="store_true", help="Stacked bar graph")
-    _ = parser.add_argument("--histogram", action="store_true", help="Histogram")
-    _ = parser.add_argument("--bins", default=5, type=int, help="Bins of Histogram")
-    _ = parser.add_argument(
-        "--differentscale",
-        action="store_true",
-        help="Categories have different scales.",
-    )
-    _ = parser.add_argument(
-        "--calendar", action="store_true", help="Calendar Heatmap chart"
-    )
-    _ = parser.add_argument("--start-dt", help="Start date for Calendar chart")
-    _ = parser.add_argument(
-        "--custom-tick", default="", help="Custom tick mark, emoji approved"
-    )
-    _ = parser.add_argument(
-        "--delim", default="", help="Custom delimiter, default , or space"
-    )
-    _ = parser.add_argument(
-        "--verbose", action="store_true", help="Verbose output, helpful for debugging"
-    )
-    _ = parser.add_argument(
-        "--label-before",
-        action="store_true",
-        default=False,
-        help="Display the values before the bars",
-    )
-    _ = parser.add_argument(
-        "--version", action="store_true", help="Display version and exit"
-    )
-    _ = parser.add_argument(
-        "--colors", action="store_true", help="show color table used"
-    )
+    _ = parser.add_argument("--differentscale", action="store_true", help="Categories have different scales.",)
+    _ = parser.add_argument("--custom-tick", default="", help="Custom tick mark, emoji approved")
+    _ = parser.add_argument("--delim", default="", help="Custom delimiter, default , or space")
+    _ = parser.add_argument("--verbose", action="store_true", help="Verbose output, helpful for debugging")
+    _ = parser.add_argument("--label-before", action="store_true", default=False, help="Display the values before the bars",)
+    _ = parser.add_argument("--version", action="store_true", help="Display version and exit")
+    _ = parser.add_argument("--colors", action="store_true", help="show color table used")
+
     if len(sys.argv) == 1:
         if sys.stdin.isatty():
             parser.print_usage()
             sys.exit(2)
 
-    args = vars(parser.parse_args())
+    args: ArgsType = vars(parser.parse_args())
 
     if args["custom_tick"] != "":
         global tick, smalltick
-        tick = args["custom_tick"]
+        tick = str(args["custom_tick"])
         smalltick = ""
 
     if args["delim"] != "":
         global delimiter
-        delimiter = args["delim"]
+        delimiter = str(args["delim"])
 
     return args
 
 
-def main():
-    """Main function."""
-    args = init_args()
-
-    if args["version"]:
-        print("termgraph v{}".format(VERSION), os.name)
-        sys.exit()
-
-    if args["colors"]:
-        for x in range(32):
-            for y in range(8):
-                color = x * 8 + y
-                _=sys.stdout.write(f"\033[38:5:{color}m{color} ▇▇▇▇▇\033[0m  ")
-            print()
-        sys.exit()
-
-    _, labels, data, colors = read_data(args)
-    try:
-        if args["calendar"]:
-            calendar_heatmap(data, labels, args)
-        else:
-            chart(colors, data, args, labels)
-    except BrokenPipeError:
-        pass
 
 
-def find_min(data: list):
+def find_min(data: list[list[Number]]) -> Number:
     """Return the minimum value in sublist of list."""
     return min([min(sublist) for sublist in data])
 
-
-def find_max(data: list):
+def find_max(data: list[list[Number]]) -> Number:
     """Return the maximum value in sublist of list."""
     return max([sum(sublist) for sublist in data])
 
 
-def normalize(data: list, width: int) -> list:
-    """Normalize the data and return it."""
-
-    # We offset by the minimum if there's a negative.
-    data_offset = []
+def normalize(data: list[list[Number]], width: int) -> list[list[Number]]:
+    """normalize the data and return it.
+       offset by the minimum if there's a negative.
+    """
+    data_offset: list[list[Number]] = []
     min_datum = find_min(data)
     if min_datum < 0:
         min_datum = abs(min_datum)
@@ -215,231 +94,34 @@ def normalize(data: list, width: int) -> list:
         return data_offset
 
     else:
-        # max_dat / width is the value for a single tick. norm_factor is the
-        # inverse of this value
-        # If you divide a number to the value of single tick, you will find how
+        # max_datum / width is the value for a single tick.
+        # norm_factor is the inverse of this value
+        # If you divide a number by the value of single tick, you will find how
         # many ticks it does contain basically.
         norm_factor = width / float(max_datum)
-        normal_data = []
+        normal_data: list[list[Number]] = []
         for datum in data_offset:
             normal_data.append([v * norm_factor for v in datum])
 
         return normal_data
 
 
-def find_max_label_length(labels: list) -> int:
+def find_max_label_length(labels: list[str]) -> int:
     """Return the maximum length for the labels."""
     return max([len(label) for label in labels])
 
 
-def cvt_to_readable(num):
-    """Return the number in a human readable format
-
-    Eg:
-    125000 -> 125.0K
-    12550 -> 12.55K
-    19561100 -> 19.561M
-    """
-
-    if num != 0:
-        neg = num < 0
-        num = abs(num)
-
-        # Find the degree of the number like if it is in thousands or millions, etc.
-        index = math.floor(math.log(num) / math.log(1000))
-
-        # Converts the number to the human readable format and returns it.
-        newNum = round(num / (1000**index), 3)
-        newNum *= -1 if neg else 1
-        degree = UNITS[index]
-
-    else:
-        newNum = 0
-        degree = UNITS[0]
-
-    return (newNum, degree)
-
-
-def hist_rows(data: list, args: dict, colors: list):
-    """Prepare the Histgram graph.
-    Each row is printed through the print_row function."""
-
-    val_min = find_min(data)
-    val_max = find_max(data)
-
-    # Calculate borders
-    class_min = math.floor(val_min)
-    class_max = math.ceil(val_max)
-    class_range = class_max - class_min
-    class_width = class_range / args["bins"]
-
-    border = class_min
-    borders = []
-    max_len = len(str(border))
-
-    for b in range(args["bins"] + 1):
-        borders.append(border)
-        len_border = len(str(border))
-        if len_border > max_len:
-            max_len = len_border
-        border += class_width
-        border = round(border, 1)
-
-    # Count num of data via border
-    count_list = []
-
-    for start, end in zip(borders[:-1], borders[1:]):
-        count = 0
-        #        for d in [d]
-        for v in [row[0] for row in data]:
-            if start <= v < end:
-                count += 1
-
-        count_list.append([count])
-
-    normal_counts = normalize(count_list, args["width"])
-
-    for i, border in enumerate(zip(borders[:-1], borders[1:])):
-        if colors:
-            color = colors[0]
-        else:
-            color = None
-
-        if not args.get("no_labels"):
-            print("{:{x}} – {:{x}} ".format(border[0], border[1], x=max_len), end="")
-
-        num_blocks = normal_counts[i]
-
-        yield (count_list[i][0], int(num_blocks[0]), 0, color)
-
-        if args.get("no_values"):
-            tail = ""
-        else:
-            tail = " {}{}".format(
-                args["format"].format(count_list[i][0]), args["suffix"]
-            )
-        print(tail)
-
-
-def horiz_rows(
-    labels: list,
-    data: list,
-    normal_dat: list,
-    args: dict,
-    colors: list,
-    doprint: bool = True,
-):
-    """Prepare the horizontal graph.
-    Each row is printed through the print_row function."""
-    val_min = find_min(data)
-
-    for i in range(len(labels)):
-        if args["no_labels"]:
-            # Hide the labels.
-            label = ""
-        else:
-            if args.get("label_before"):
-                fmt = "{:<{x}}"
-            else:
-                fmt = "{:<{x}} "
-            label = fmt.format(labels[i], x=find_max_label_length(labels))
-
-        values = data[i]
-        num_blocks = normal_dat[i]
-
-        if args.get("space_between") and i != 0:
-            print()
-
-        for j in range(len(values)):
-            # In Multiple series graph 1st category has label at the beginning,
-            # whereas the rest categories have only spaces.
-            if j > 0:
-                len_label = len(label)
-                label = " " * len_label
-            if args.get("label_before"):
-                fmt = "{}{}{}"
-            else:
-                fmt = " {}{}{}"
-
-            if args["no_values"]:
-                tail = args["suffix"]
-            else:
-                val, deg = cvt_to_readable(values[j])
-                tail = fmt.format(args["format"].format(val), deg, args["suffix"])
-
-            if colors:
-                color = colors[j]
-            else:
-                color = None
-
-            if not args.get("label_before") and not args.get("vertical"):
-                print(label, end="")
-
-            yield (
-                values[j],
-                int(num_blocks[j]),
-                val_min,
-                color,
-                label,
-                tail,
-                args.get("label_before") and not args.get("vertical"),
-            )
-
-            if not args.get("label_before") and not args.get("vertical"):
-                print(tail)
-
-
-# Prints a row of the horizontal graph.
-def print_row(
-    value,
-    num_blocks: int,
-    val_min: int,
-    color: int,
-    label: bool = False,
-    tail: bool = False,
-    doprint: bool = False,
-):
-    """A method to print a row for a horizontal graphs.
-    i.e:
-    1 ▇▇ 2
-    2 ▇▇▇ 3
-    3 ▇▇▇▇ 4
-    """
-    sys.stdout.write("\033[0m")  # no color
-
-    if doprint:
-        print(label, tail, " ", end="")
-
-    if color:
-        sys.stdout.write(f"\033[38:5:{color}m")  # Start to write colorized.
-
-    if (num_blocks < 1 and (value > val_min or value > 0)) or (
-        doprint and value == 0.0
-    ):
-        # Print something if it's not the smallest
-        # and the normal value is less than one.
-        sys.stdout.write(smalltick)
-    else:
-        for _ in range(num_blocks):
-            sys.stdout.write(tick)
-
-    if color:
-        sys.stdout.write("\033[0m")  # Back to original.
-
-    if doprint:
-        print()
-
 
 def stacked_graph(
-    labels: list,
-    data: list,
-    normal_data: list,
-    len_categories: int,
-    args: dict,
-    colors: list,
-):
+        labels: list[str],
+        data: list[list[Number]],
+        normal_data: list[list[Number]],
+        args: ArgsType,
+        colors: list[int],
+    ):
     """Prepare the horizontal stacked graph.
-    Each row is printed through the print_row function."""
+    Each row is printed through the print_row function.
+    """
     val_min = find_min(data)
 
     for i in range(len(labels)):
@@ -458,158 +140,15 @@ def stacked_graph(
         num_blocks = normal_data[i]
 
         for j in range(len(values)):
-            print_row(values[j], int(num_blocks[j]), val_min, colors[j % len(colors)])
+            print_row(values[j], int(num_blocks[j]), val_min,
+                      colors[j % len(colors)], tick=tick, smalltick=smalltick)
 
-        tail = " {}{}".format(args["format"].format(sum(values)), args["suffix"])
+        tail = " {}{}".format(str(args["format"]).format(sum(values)), args["suffix"])
         print(tail)
 
 
-# FIXME: globals for vertical, not ideal
-value_list, zipped_list, vertical_list, maxi = [], [], [], 0
 
-
-def vertically(value, num_blocks: int, val_min: int, color: bool, args: dict) -> list:
-    """Prepare the vertical graph.
-    The whole graph is printed through the print_vertical function."""
-    global maxi, value_list
-
-    value_list.append(str(value))
-
-    # In case the number of blocks at the end of the normalization is less
-    # than the default number, use the maxi variable to escape.
-    if maxi < num_blocks:
-        maxi = num_blocks
-
-    if num_blocks > 0:
-        vertical_list.append((tick * num_blocks))
-    else:
-        vertical_list.append(smalltick)
-
-    # Zip_longest method in order to turn them vertically.
-    for row in zip_longest(*vertical_list, fillvalue=" "):
-        zipped_list.append(row)
-
-    counter, result_list = 0, []
-
-    # Combined with the maxi variable, escapes the appending method at
-    # the correct point or the default one (width).
-    for i in reversed(zipped_list):
-        result_list.append(i)
-        counter += 1
-
-        if maxi == args["width"]:
-            if counter == (args["width"]):
-                break
-        else:
-            if counter == maxi:
-                break
-
-    # Return a list of rows which will be used to print the result vertically.
-    return result_list
-
-
-def print_vertical(vertical_rows: list, labels: list, color: bool, args: dict) -> None:
-    """Print the whole vertical graph."""
-    if color:
-        sys.stdout.write(
-            "\033[38:5:{color}m".format(color=color)
-        )  # Start to write colorized.
-
-    for row in vertical_rows:
-        print(*row)
-
-    sys.stdout.write("\033[0m")  # End of printing colored
-
-    if not args["no_values"]:
-        print("-" * len(row) + "Values" + "-" * len(row))
-        for value in zip_longest(*value_list, fillvalue=" "):
-            print("  ".join(value))
-
-    if not args["no_labels"]:
-        print("-" * len(row) + "Labels" + "-" * len(row))
-        # Print Labels
-        for label in zip_longest(*labels, fillvalue=""):
-            print("  ".join(label))
-
-
-def chart(colors: list, data: list, args: dict, labels: list) -> None:
-    """Handle the normalization of data and the printing of the graph."""
-    len_categories = len(data[0])
-    if len_categories > 0:
-        # Stacked graph
-        if args["stacked"]:
-            normal_dat = normalize(data, args["width"])
-            stacked_graph(labels, data, normal_dat, len_categories, args, colors)
-            return
-
-        if not colors:
-            colors = [None] * len_categories
-
-        # Multiple series graph with different scales
-        # Normalization per category
-        if args["differentscale"]:
-            for i in range(len_categories):
-                cat_data = []
-                for dat in data:
-                    cat_data.append([dat[i]])
-
-                # Normalize data, handle negatives.
-                normal_cat_data = normalize(cat_data, args["width"])
-
-                # Generate data for a row.
-                for row in horiz_rows(
-                    labels, cat_data, normal_cat_data, args, [colors[i % len(colors)]]
-                ):
-                    # Print the row
-                    if args["vertical"]:
-                        # FIXME: passing args is getting complex
-                        vertic = vertically(row[0], row[1], row[2], row[3], args=args)
-                    else:
-                        print_row(*row)
-
-                # The above gathers data for vertical and does not print
-                # the final print happens at once here
-                if args["vertical"]:
-                    print_vertical(vertic, labels, colors[i % len(colors)], args)
-
-                print()
-                value_list.clear(), zipped_list.clear(), vertical_list.clear()
-            return
-
-    if args["histogram"]:
-        if args["vertical"]:
-            print(">> Error: Vertical graph for Histogram is not supported yet.")
-            sys.exit(1)
-
-        for row in hist_rows(data, args, colors):
-            print_row(*row)
-            print()
-        return
-
-    # One category/Multiple series graph with same scale
-    # All-together normalization
-    if not args["stacked"]:
-        normal_dat = normalize(data, args["width"])
-        sys.stdout.write("\033[0m")  # no color
-        for row in horiz_rows(labels, data, normal_dat, args, colors):
-            if not args["vertical"]:
-                print_row(*row)
-            else:
-                # FIXME: passing args is getting complex
-                vertic = vertically(row[0], row[1], row[2], row[3], args=args)
-
-        if args["vertical"] and len_categories == 1:
-            if colors:
-                color = colors[0]
-            else:
-                color = None
-
-            print_vertical(vertic, labels, color, args)
-
-        print()
-
-
-def check_data(labels: list, data: list, args: dict) -> list:
+def check_data(labels: list[str], data: list[list[Number]], args: ArgsType) -> list[int]:
     """Check that all data were inserted correctly. Return the colors."""
     if len(data) == 0:
         sys.exit(0)
@@ -627,78 +166,56 @@ def check_data(labels: list, data: list, args: dict) -> list:
             print(">> Error: There are missing values")
             sys.exit(1)
 
-    colors = []
+    colors: list[int] = []
 
     # If user inserts colors, they should be as many as the categories.
-    if args["color"] is not None:
-        # Decompose arguments for Windows
-        if os.name == "nt":
-            colorargs = re.findall(r"[a-z]+", args["color"][0])
-            if len(colorargs) != len_categories:
-                print(">> Error: Color and category array sizes don't match")
-            for color in colorargs:
-                if color not in AVAILABLE_COLORS:
-                    print(
-                        ">> Error: invalid color. choose from 'red', 'blue', 'green', 'magenta', 'yellow', 'black', 'cyan'"
-                    )
-                    sys.exit(2)
-        else:
-            if len(args["color"]) != len_categories:
-                print(">> Error: Color and category array sizes don't match")
-            for color in args["color"]:
-                if color not in AVAILABLE_COLORS:
-                    print(
-                        ">> Error: invalid color. choose from 'red', 'blue', 'green', 'magenta', 'yellow', 'black', 'cyan'"
-                    )
-                    sys.exit(2)
+    argcolors: list[str] = cast(list[str], args['color'])
+    if argcolors:
+        if len(argcolors) != len_categories:
+            print(f'>> Error: color {len(argcolors)} and category array sizes {len_categories} dont match')
+            sys.exit(1)
 
-        if os.name == "nt":
-            for color in colorargs:
-                colors.append(AVAILABLE_COLORS.get(color))
-        else:
-            for color in args["color"]:
-                colors.append(AVAILABLE_COLORS.get(color))
+        for color in argcolors:
+            if color not in COLORS:
+                print(
+                    f'>> Error: invalid color {color}. choose from red, blue, green, magenta, yellow, black, cyan'
+                )
+                sys.exit(1)
 
-    # Vertical graph for multiple series of same scale is not supported yet.
-    if args["vertical"] and len_categories > 0 and not args["differentscale"]:
-        print(
-            ">> Error: Vertical graph for multiple series of same "
-            "scale is not supported yet."
-        )
-        sys.exit(1)
+        for color in argcolors:
+            colors.append(cast(int, COLORS.get(color)))
 
     # If user hasn't inserted colors, pick the first n colors
     # from the dict (n = number of categories).
     if not colors:
-        colors = [v for v in list(AVAILABLE_COLORS.values())[:len_categories]]
+        colors = [v for v in list(COLORS.values())[:len_categories]]
 
     return colors
 
 
-def print_categories(categories: list, colors: list, args: dict) -> None:
+def print_categories(categories: list[str], colors: list[int], args: ArgsType) -> None:
     """Print a tick and the category's name for each category above
     the graph."""
     sofar: int = 0
+    argwidth: int = cast(int, args["width"])
     for i in range(len(categories)):
         if colors:
-            sys.stdout.write(
-                f"\033[38:5:{colors[i % len(colors)]}m"
-            )  # Start to write colorized.
+            _ = sys.stdout.write( f"\033[38:5:{colors[i % len(colors)]}m")  # Start to write colorized.
 
-        sys.stdout.write(tick + " " + categories[i] + " ")
+        _ = sys.stdout.write(tick + " " + categories[i] + " ")
 
         if colors:
-            sys.stdout.write("\033[0m")  # Back to original.
+            _ = sys.stdout.write("\033[0m")  # Back to original.
 
         sofar += len(categories[i]) + 2
-        if sofar > args["width"]:
-            sys.stdout.write("\n")
+        if sofar > argwidth:
+            _ = sys.stdout.write("\n")
             sofar = 0
 
     print("\n")
 
 
-def read_data(args: dict) -> tuple[list, list, list, list]:
+def read_data(args: ArgsType) -> tuple[list[str], list[str], list[list[Number]], list[int]]:
     """Read data from a file or stdin and returns it.
 
     Filename includes (categories), labels and data.
@@ -710,7 +227,7 @@ def read_data(args: dict) -> tuple[list, list, list, list]:
     categories = ['boys', 'girls']
     data = [ [20.4, 40.5], [30.7, 100.0], ...]"""
 
-    filename = args["filename"]
+    filename: str = cast(str, args["filename"])
     stdin = filename == "-"
 
     if args["verbose"]:
@@ -718,7 +235,7 @@ def read_data(args: dict) -> tuple[list, list, list, list]:
 
     print("")
     if args["title"]:
-        print("# " + args["title"] + "\n")
+        print("# " + cast(str, args["title"]) + "\n")
 
     categories, labels, data, colors = ([] for _ in range(4))
 
@@ -755,18 +272,14 @@ def read_data(args: dict) -> tuple[list, list, list, list]:
 
                         data.append(data_points)
     except FileNotFoundError:
-        print(
-            ">> Error: The specified file [{fname}] does not exist.".format(
-                fname=filename
-            )
-        )
-        sys.exit()
+        print( f">> Error: The specified file [{filename}] does not exist.")
+        sys.exit(1)
     except IOError:
         print("An IOError has occurred!")
-        sys.exit()
+        sys.exit(1)
     finally:
         if f is not None:
-            f.close()
+            _ = f.close()
 
     # Check that all data are valid. (i.e. There are no missing values.)
     colors = check_data(labels, data, args)
@@ -776,82 +289,138 @@ def read_data(args: dict) -> tuple[list, list, list, list]:
 
     return categories, labels, data, colors
 
+def horiz_rows(
+    labels: list[str],
+    data: list[list[Number]],
+    normal_dat: list[list[Number]],
+    args: ArgsType,
+    colors: list[int]
+):
+    """Prepare the horizontal graph.
+    Each row is printed through the print_row function."""
+    val_min = find_min(data)
 
-def calendar_heatmap(data: list, labels: list, args: dict) -> None:
-    """Print a calendar heatmap."""
-    if args["color"]:
-        colornum = AVAILABLE_COLORS.get(args["color"][0])
-    else:
-        colornum = AVAILABLE_COLORS.get("blue")
-
-    dt_dict = {}
     for i in range(len(labels)):
-        dt_dict[labels[i]] = data[i][0]
-
-    # get max value
-    max_val = float(max(data)[0])
-
-    tick_1 = "░"
-    tick_2 = "▒"
-    tick_3 = "▓"
-    tick_4 = "█"
-
-    if args["custom_tick"]:
-        tick_1 = tick_2 = tick_3 = tick_4 = args["custom_tick"]
-
-    # check if start day set, otherwise use one year ago
-    if args["start_dt"]:
-        start_dt = datetime.strptime(args["start_dt"], "%Y-%m-%d")
-    else:
-        start = datetime.now()
-        start_dt = datetime(year=start.year - 1, month=start.month, day=start.day)
-
-    # modify start date to be a Monday, subtract weekday() from day
-    start_dt = start_dt - timedelta(start_dt.weekday())
-
-    # TODO: legend doesn't line up properly for all start dates/data
-    # top legend for months
-    sys.stdout.write("     ")
-    for month in range(13):
-        month_dt = datetime(
-            year=start_dt.year, month=start_dt.month, day=1
-        ) + timedelta(days=month * 31)
-        sys.stdout.write(month_dt.strftime("%b") + " ")
-        if args["custom_tick"]:  # assume custom tick is emoji which is one wider
-            sys.stdout.write(" ")
-
-    sys.stdout.write("\n")
-
-    for day in range(7):
-        sys.stdout.write(DAYS[day] + " ")
-        for week in range(53):
-            day_ = start_dt + timedelta(days=day + week * 7)
-            day_str = day_.strftime("%Y-%m-%d")
-
-            if day_str in dt_dict:
-                if dt_dict[day_str] > max_val * 0.75:
-                    tick = tick_4
-                elif dt_dict[day_str] > max_val * 0.50:
-                    tick = tick_3
-                elif dt_dict[day_str] > max_val * 0.25:
-                    tick = tick_2
-                # show nothing if value is zero
-                elif dt_dict[day_str] == 0.0:
-                    tick = " "
-                # show values for less than 0.25
-                else:
-                    tick = tick_1
+        if args["no_labels"]:
+            # Hide the labels.
+            label = ""
+        else:
+            if args.get("label_before"):
+                fmt = "{:<{x}}"
             else:
-                tick = " "
+                fmt = "{:<{x}} "
+            label = fmt.format(labels[i], x=find_max_label_length(labels))
 
-            if colornum:
-                sys.stdout.write("\033[38:5:{colornum}m".format(colornum=colornum))
+        values = data[i]
+        num_blocks: list[int] = cast(list[int], normal_dat[i])
 
-            sys.stdout.write(tick)
-            if colornum:
-                sys.stdout.write("\033[0m")
+        if args.get("space_between") and i != 0:
+            print()
 
-        sys.stdout.write("\n")
+        for j in range(len(values)):
+            # In Multiple series graph 1st category has label at the beginning,
+            # whereas the rest categories have only spaces.
+            if j > 0:
+                len_label = len(label)
+                label = " " * len_label
+            if args.get("label_before"):
+                fmt = "{}{}{}"
+            else:
+                fmt = " {}{}{}"
+
+            if args["no_values"]:
+                tail = cast(str, args["suffix"])
+            else:
+                val, deg = cvt_to_readable(values[j])
+                tail = fmt.format(cast(str, args["format"]).format(val), deg, args["suffix"])
+
+            if colors:
+                color = colors[j]
+            else:
+                color = None
+
+            if not args.get("label_before"):
+                print(label, end="")
+
+            yield (
+                values[j],
+                int(num_blocks[j]),
+                val_min,
+                color,
+                label,
+                tail,
+                args.get("label_before"),
+                tick,
+                smalltick)
+
+            if not args.get("label_before"):
+                print(tail)
+
+def chart(colors: list[int], data: list[list[Number]], args: ArgsType, labels: list[str]) -> None:
+    """Handle the normalization of data and the printing of the graph."""
+    len_categories = len(data[0])
+    if len_categories > 0:
+        # Stacked graph
+        if args["stacked"]:
+            normal_dat = normalize(data, cast(int, args["width"]))
+            stacked_graph(labels, data, normal_dat, args, colors)
+            return
+
+        if not colors:
+            colors = [0] * len_categories
+
+        # Multiple series graph with different scales
+        # Normalization per category
+        if args["differentscale"]:
+            for i in range(len_categories):
+                cat_data: list[list[Number]] = []
+                for dat in data:
+                    cat_data.append([dat[i]])
+
+                # Normalize data, handle negatives.
+                normal_cat_data = normalize(cat_data, cast(int, args["width"]))
+
+                # Generate data for a row.
+                for row in horiz_rows( labels, cat_data, normal_cat_data, args, [colors[i % len(colors)]]):
+                    # Print the row
+                    print_row(*row)
+
+                print()
+            return
+
+
+    # One category/Multiple series graph with same scale
+    # All-together normalization
+    if not args["stacked"]:
+        normal_dat = normalize(data, cast(int, args["width"]))
+        _ = sys.stdout.write("\033[0m")  # no color
+        for row in horiz_rows(labels, data, normal_dat, args, colors):
+            print_row(*row)
+
+        print()
+
+
+def main():
+    """Main function."""
+    args = init_args()
+
+    if args["version"]:
+        print("termgraph v{}".format(get_version()), os.name)
+        sys.exit()
+
+    if args["colors"]:
+        for x in range(32):
+            for y in range(8):
+                color = x * 8 + y
+                _=sys.stdout.write(f"\033[38:5:{color}m{color} ▇▇▇▇▇\033[0m  ")
+            print()
+        sys.exit()
+
+    _, labels, data, colors = read_data(args)
+    try:
+        chart(colors, data, args, labels)
+    except BrokenPipeError:
+        pass
 
 
 if __name__ == "__main__":
