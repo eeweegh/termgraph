@@ -12,7 +12,6 @@ from math import floor, log
 """ types
 """
 Number = int | float
-ArgsType = dict[str, str | Number | bool | list[str] | None]
 
 def get_version() -> str:
     """Get the version of the project from pyproject.toml file.
