@@ -1,6 +1,6 @@
 [project]
 name = "termgraph"
-version = "1.3.4"
+version = "1.3.7"
 description = "terminal graphing"
 readme = "README.md"
 authors = [

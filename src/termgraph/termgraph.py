@@ -10,7 +10,7 @@ import re
 
 from typing import cast
 
-from .utils import get_version, DELIMITER, TICK, SMALLTICK, COLORS, print_row, cvt_to_readable
+from .utils import get_version, DELIMITER, TICK, SMALLTICK, COLORS, print_row, cvt_to_readable, print_color_table
 from .utils import Number, ArgsType
 
 
@@ -20,8 +20,6 @@ from .utils import Number, ArgsType
 delimiter: str = DELIMITER
 tick: str = TICK
 smalltick: str = SMALLTICK
-
-
 
 def init_args() -> ArgsType:
     """Parse and return the arguments."""
@@ -149,21 +147,22 @@ def stacked_graph(
 
 
 def check_data(labels: list[str], data: list[list[Number]], args: ArgsType) -> list[int]:
-    """Check that all data were inserted correctly. Return the colors."""
+    """check that all data were inserted correctly. Return the colors."""
     if len(data) == 0:
+        # no data to plot.
         sys.exit(0)
 
     len_categories = len(data[0])
 
     # Check that there are data for all labels.
     if len(labels) != len(data):
-        print(">> Error: Label and data array sizes don't match")
+        print(">> Error: Label and data array sizes don't match", file=sys.stderr)
         sys.exit(1)
 
     # Check that there are data for all categories per label.
     for dat in data:
         if len(dat) != len_categories:
-            print(">> Error: There are missing values")
+            print(">> Error: There are missing values", file=sys.stderr)
             sys.exit(1)
 
     colors: list[int] = []
@@ -172,14 +171,14 @@ def check_data(labels: list[str], data: list[list[Number]], args: ArgsType) -> l
     argcolors: list[str] = cast(list[str], args['color'])
     if argcolors:
         if len(argcolors) != len_categories:
-            print(f'>> Error: color {len(argcolors)} and category array sizes {len_categories} dont match')
+            print(f'>> Error: color {len(argcolors)} and category array sizes {len_categories} dont match', file=sys.stderr)
             sys.exit(1)
 
         for color in argcolors:
             if color not in COLORS:
                 print(
-                    f'>> Error: invalid color {color}. choose from red, blue, green, magenta, yellow, black, cyan'
-                )
+                    f'>> Error: invalid color {color}. choose from red, blue, green, magenta, yellow, black, cyan',
+                    file=sys.stderr)
                 sys.exit(1)
 
         for color in argcolors:
@@ -218,20 +217,24 @@ def print_categories(categories: list[str], colors: list[int], args: ArgsType) -
 def read_data(args: ArgsType) -> tuple[list[str], list[str], list[list[Number]], list[int]]:
     """Read data from a file or stdin and returns it.
 
-    Filename includes (categories), labels and data.
-    We append categories and labels to lists.
-    Data are inserted to a list of lists due to the categories.
+    Filename includes (optional: categories), labels and data.
+    - categories and labels get collected in lists.
+    - data are inserted in a list of lists, one per category
 
     i.e.
     labels = ['2001', '2002', '2003', ...]
     categories = ['boys', 'girls']
     data = [ [20.4, 40.5], [30.7, 100.0], ...]"""
 
+    labels: list[str] = []
+    categories: list[str] = []
+    data: list[list[Number]] = []
+
     filename: str = cast(str, args["filename"])
     stdin = filename == "-"
 
     if args["verbose"]:
-        print(">> Reading data from {src}".format(src=("stdin" if stdin else filename)))
+        print(">> Reading data from {src}".format(src=("stdin" if stdin else filename)), file=sys.stderr)
 
     print("")
     if args["title"]:
@@ -240,12 +243,12 @@ def read_data(args: ArgsType) -> tuple[list[str], list[str], list[list[Number]],
     categories, labels, data, colors = ([] for _ in range(4))
 
     f = None
-
     try:
         f = sys.stdin if stdin else open(filename, "r")
         for line in f:
             line = line.strip()
             if line:
+                # simple comment syntax
                 if not line.startswith("#"):
                     if line.find(delimiter) > 0:
                         # https://stackoverflow.com/questions/2785755/how-to-split-but-ignore-separators-in-quoted-strings-in-python
@@ -262,8 +265,9 @@ def read_data(args: ArgsType) -> tuple[list[str], list[str], list[list[Number]],
 
                     # Line contains label and values.
                     else:
+                        # remove any quotes and spaces from labelname
                         labels.append(cols[0].strip(' "'))
-                        data_points = []
+                        data_points: list[Number] = []
                         for i in range(1, len(cols)):
                             s = cols[i].strip()
                             if not s:
@@ -271,11 +275,12 @@ def read_data(args: ArgsType) -> tuple[list[str], list[str], list[list[Number]],
                             data_points.append(float(s))
 
                         data.append(data_points)
+
     except FileNotFoundError:
-        print( f">> Error: The specified file [{filename}] does not exist.")
+        print( f">> Error: The specified file [{filename}] does not exist.", file=sys.stderr)
         sys.exit(1)
     except IOError:
-        print("An IOError has occurred!")
+        print("An IOError has occurred!", file=sys.stderr)
         sys.exit(1)
     finally:
         if f is not None:
@@ -349,7 +354,7 @@ def horiz_rows(
                 color,
                 label,
                 tail,
-                args.get("label_before"),
+                cast(bool, args.get("label_before")),
                 tick,
                 smalltick)
 
@@ -381,7 +386,7 @@ def chart(colors: list[int], data: list[list[Number]], args: ArgsType, labels: l
                 normal_cat_data = normalize(cat_data, cast(int, args["width"]))
 
                 # Generate data for a row.
-                for row in horiz_rows( labels, cat_data, normal_cat_data, args, [colors[i % len(colors)]]):
+                for row in horiz_rows(labels, cat_data, normal_cat_data, args, [colors[i % len(colors)]]):
                     # Print the row
                     print_row(*row)
 
@@ -409,11 +414,7 @@ def main():
         sys.exit()
 
     if args["colors"]:
-        for x in range(32):
-            for y in range(8):
-                color = x * 8 + y
-                _=sys.stdout.write(f"\033[38:5:{color}m{color} ▇▇▇▇▇\033[0m  ")
-            print()
+        print_color_table()
         sys.exit()
 
     _, labels, data, colors = read_data(args)

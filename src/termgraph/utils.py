@@ -49,7 +49,7 @@ def cvt_to_readable(num: Number) -> tuple[Number, str]:
     index = min(index, len(UNITS) - 1)  # prevent overflow
 
     # Compute scaled value
-    scaled: float = abs_num / (1000 ** index)
+    scaled: float = cast(float, abs_num / (1000 ** index))
 
     # Round to 3 decimal places
     result = round(scaled, 3)
@@ -110,12 +110,22 @@ COLORS = {
     "39": 39,
 }
 
+# print a color table
+def print_color_table():
+    """Print a color table for 8 bit ANSI escape codes.
+    """
+    for x in range(32):
+        for y in range(8):
+            color = x * 8 + y
+            _=sys.stdout.write("\033[38:5:{}m{:>3d} ▇▇▇▇▇\033[0m  ".format(color, color))
+        print()
+
 # Prints a row of the horizontal graph.
 def print_row(
         value: Number,
         num_blocks: int,
         val_min: Number,
-        color: int,
+        color: int | None = None,
         label: str = "",
         tail: str = "",
         doprint: bool = False,

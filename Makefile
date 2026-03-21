@@ -6,21 +6,24 @@ ignore:
 	@echo "This is a Makefile for termgraph. Use 'make install' to install the tool, 'make update' to update it, and 'make clean' to uninstall it."
 
 clean:
-	rm -f .ruff_cache
+	rm -rf .ruff_cache
 
 uninstall:
 	uv tool uninstall termgraph
 	rm -f ${HOME}/.local/bin/tg
 
 install:
+	touch pyproject.toml
 	uv tool install .
 	install -v -D --mode=755 --target-directory=${HOME}/.local/bin bin/tg
 
 update:
+	touch pyproject.toml
 	uv tool upgrade termgraph
 	install -v -D --mode=755 --target-directory=${HOME}/.local/bin bin/tg
 
 test:
+	touch pyproject.toml
 	uv tool run termgraph --version
 	uv tool run termgraph --help
 	uv tool run termgraph --colors
