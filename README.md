@@ -12,7 +12,12 @@ Empty input, or a bare invocation on a terminal, exits silently with status 0. E
 
 `termgraph --help` lists every option. `--format` takes one printf conversion (`%5.2f`, `%.1f%%`, `%d`), not a Python format spec.
 
-`bin/tg` is a zsh driver that reads CSV with a header through [xan](https://github.com/medialab/xan) and picks single or stacked output. `just install` puts it in `~/.local/bin` next to the binary.
+`bin/tg` is a zsh driver that reads CSV with a header through [xan](https://github.com/medialab/xan) and picks single or stacked output. It is embedded in the binary; `just install` writes it to `~/.local/bin`, or from a plain cargo install:
+
+```
+cargo install --git https://github.com/eeweegh/termgraph
+termgraph --tg-script > ~/.local/bin/tg && chmod 755 ~/.local/bin/tg
+```
 
 ## Layout of the code
 
