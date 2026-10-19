@@ -28,7 +28,9 @@ man:
 
 install:
     cargo install --path . --locked
-    install -v -D --mode=755 --target-directory=${HOME}/.local/bin bin/tg
+    mkdir -p ${HOME}/.local/bin
+    ${CARGO_HOME:-$HOME/.cargo}/bin/termgraph --tg-script > ${HOME}/.local/bin/tg
+    chmod 755 ${HOME}/.local/bin/tg
 
 uninstall:
     cargo uninstall termgraph

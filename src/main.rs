@@ -9,6 +9,12 @@ fn main() -> ExitCode {
         termgraph::generate::completions(shell, &mut stdout());
         return ExitCode::SUCCESS;
     }
+    if cli.tg_script {
+        return match termgraph::generate::tg_script(&mut stdout()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => fail(&e),
+        };
+    }
     if cli.man {
         return match termgraph::generate::man_page(&mut stdout()) {
             Ok(()) => ExitCode::SUCCESS,

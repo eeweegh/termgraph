@@ -112,3 +112,12 @@ fn closed_pipe_is_not_an_error() {
     let _ = feeder.join();
     assert!(output.status.success(), "{}", stderr(&output));
 }
+
+#[test]
+fn tg_script_matches_bin_tg() {
+    let output = run("", &["--tg-script"]);
+    let script = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/bin/tg")).unwrap();
+    assert!(output.status.success() && output.stderr.is_empty());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), script);
+    assert!(script.starts_with("#!/usr/bin/env zsh\n"));
+}

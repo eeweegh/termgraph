@@ -14,6 +14,8 @@ Format (--format): one printf conversion, f or d, with flags - + space 0, width 
 and optional literal text, e.g. %5.2f, %.1f%%, %d. Values are scaled to K/M/B/T before formatting
 (not in --stacked, which formats the row total).
 
+The tg driver script (zsh, needs xan) is embedded: termgraph --tg-script > ~/.local/bin/tg && chmod 755 ~/.local/bin/tg
+
 Examples:
   termgraph data.csv --width 40 --color blue red
   printf '@,Boys,Girls\\n2007,183,202\\n2008,231,199\\n' | termgraph --stacked";
@@ -62,6 +64,9 @@ pub struct Cli {
     /// Show the color table and exit
     #[arg(long)]
     pub colors: bool,
+    /// Print the tg driver script (zsh) and exit
+    #[arg(long)]
+    pub tg_script: bool,
     /// Print a shell completion script and exit
     #[arg(long, value_name = "SHELL", hide = true)]
     pub completions: Option<Shell>,

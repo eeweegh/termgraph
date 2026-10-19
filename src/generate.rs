@@ -10,3 +10,7 @@ pub fn completions(shell: Shell, out: &mut impl Write) {
 pub fn man_page(out: &mut impl Write) -> io::Result<()> {
     clap_mangen::Man::new(Cli::command()).render(out)
 }
+
+pub fn tg_script(out: &mut impl Write) -> io::Result<()> {
+    out.write_all(include_str!("../bin/tg").as_bytes())
+}
