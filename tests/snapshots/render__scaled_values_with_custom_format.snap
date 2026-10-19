@@ -1,0 +1,7 @@
+---
+source: tests/render.rs
+expression: "chart(LARGE, &[\"--width\", \"20\", \"--format\", \"%.1f\"])"
+---
+␛[0mx ␛[0m␛[38:5:2m⡇␛[0m 12.6K
+y ␛[0m␛[38:5:2m⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿␛[0m 19.6M
+z ␛[0m␛[38:5:2m⡇␛[0m 999.0
