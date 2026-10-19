@@ -29,3 +29,7 @@ man:
 install:
     cargo install --path . --locked
     install -v -D --mode=755 --target-directory=${HOME}/.local/bin bin/tg
+
+uninstall:
+    cargo uninstall termgraph
+    rm -f ${HOME}/.local/bin/tg
