@@ -70,3 +70,22 @@ fn custom_delimiter_and_quoted_label() {
 fn legend_wraps_at_width() {
     assert_snapshot!(chart("@,Alpha,Bravo,Charlie\nr,1,2,3\n", &["--width", "12"]));
 }
+
+#[test]
+fn legend_is_shown_for_a_single_series_on_request() {
+    assert!(chart(SINGLE, &["--legend"]).contains("Boys"));
+    assert!(!chart(SINGLE, &[]).contains("Boys"));
+}
+
+#[test]
+fn legend_can_be_hidden() {
+    assert!(!chart(MULTI, &["--no-legend"]).contains("Boys"));
+}
+
+#[test]
+fn at_header_is_still_accepted() {
+    assert_eq!(
+        chart("@,Boys,Girls\n2007,1,2\n", &["--width", "20"]),
+        chart("year,Boys,Girls\n2007,1,2\n", &["--width", "20"])
+    );
+}

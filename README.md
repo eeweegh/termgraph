@@ -3,16 +3,16 @@
 Draw basic bar graphs in the terminal. Rust rewrite of a trimmed-down fork of [mkaz/termgraph](https://github.com/mkaz/termgraph).
 
 ```
-printf '@,Boys,Girls\n2007,183,202\n2008,231,199\n' | termgraph --stacked
+printf 'year,Boys,Girls\n2007,183,202\n2008,231,199\n' | termgraph --stacked
 termgraph data.csv --width 40 --color blue red
 ```
 
-Input is a file or stdin: an optional `@,Cat1,Cat2` header, then `label,value[,value...]` rows; `#` lines and blank lines are skipped. Columns split on the delimiter (outside quotes), else on whitespace.
+Input is a file or stdin: plain CSV with an optional header (`year,Cat1,Cat2`; the first column name is ignored, a leading `@` also works), then `label,value[,value...]` rows; `#` lines and blank lines are skipped. Columns split on the delimiter (outside quotes), else on whitespace.
 Empty input, or a bare invocation on a terminal, exits silently with status 0. Errors go to stderr as `termgraph: error: ...` with status 1.
 
 `termgraph --help` lists every option. `--format` takes one printf conversion (`%5.2f`, `%.1f%%`, `%d`), not a Python format spec.
 
-`bin/tg` is a zsh driver that reads CSV with a header through [xan](https://github.com/medialab/xan) and picks single or stacked output. It is embedded in the binary; `just install` writes it to `~/.local/bin`, or from a plain cargo install:
+`bin/tg` is a small zsh driver that sets the look (width from the terminal, stacked bars; `TGNOSTACK` for plain) and passes everything else to termgraph. It is embedded in the binary; `just install` writes it to `~/.local/bin`, or from a plain cargo install:
 
 ```
 cargo install --git https://github.com/eeweegh/termgraph

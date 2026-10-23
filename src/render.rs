@@ -11,6 +11,8 @@ pub struct Options {
     pub format: Format,
     pub suffix: String,
     pub title: Option<String>,
+    /// `None` shows the legend for more than one category.
+    pub legend: Option<bool>,
     pub stacked: bool,
     pub no_labels: bool,
     pub no_values: bool,
@@ -25,7 +27,7 @@ pub fn chart(out: &mut impl Write, data: &Dataset, colors: &[u8], opts: &Options
     let label_width = data.labels.iter().map(|l| l.chars().count()).max().unwrap_or(0);
     let mut chart =
         Chart { out, data, colors, opts, normal: data.normalised(opts.width), min: data.min(), label_width };
-    if !data.categories.is_empty() {
+    if !data.categories.is_empty() && opts.legend.unwrap_or(data.categories.len() > 1) {
         chart.legend()?;
     }
     if opts.stacked { chart.stacked() } else { chart.rows() }

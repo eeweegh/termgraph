@@ -25,7 +25,7 @@ pub fn parse(reader: impl BufRead, delim: &str) -> Result<Dataset, Error> {
             continue;
         }
         let cols = split(line, delim);
-        if line.starts_with('@') {
+        if is_header(&cols, &data) {
             data.categories = cols[1..].iter().map(|c| unquote(c).to_string()).collect();
             continue;
         }
@@ -35,6 +35,16 @@ pub fn parse(reader: impl BufRead, delim: &str) -> Result<Dataset, Error> {
     }
     check_rows(&data)?;
     Ok(data)
+}
+
+// The header is the first line when it has a non-numeric value cell (as in any csv with a header),
+// or a line starting with `@`. The name of the first column is ignored.
+fn is_header(cols: &[&str], data: &Dataset) -> bool {
+    if !data.rows.is_empty() || !data.categories.is_empty() {
+        return false;
+    }
+    cols[0].starts_with('@')
+        || cols[1..].iter().any(|c| !c.trim().is_empty() && c.trim().parse::<f64>().is_err())
 }
 
 fn check_rows(data: &Dataset) -> Result<(), Error> {
@@ -111,6 +121,30 @@ mod tests {
     }
 
     #[test]
+    fn plain_csv_header_names_the_categories() {
+        let data = parse_str("year,Boys,Girls\n2007,183,202\n").unwrap();
+        assert_eq!(data.categories, ["Boys", "Girls"]);
+        assert_eq!(data.labels, ["2007"]);
+    }
+
+    #[test]
+    fn headerless_input_has_no_categories() {
+        assert!(parse_str("a,1\nb,2\n").unwrap().categories.is_empty());
+    }
+
+    #[test]
+    fn only_the_first_line_can_be_a_header() {
+        let err = parse_str("name,count\na,1\nb,x\n").unwrap_err();
+        assert_eq!(err.to_string(), "invalid data point [x] in line [b,x]");
+    }
+
+    #[test]
+    fn quoted_header_names() {
+        let data = parse_str("name,\"a, b\",c\nx,1,2\n").unwrap();
+        assert_eq!(data.categories, ["a, b", "c"]);
+    }
+
+    #[test]
     fn skips_comments_and_blank_lines() {
         let data = parse_str("# note\n\na,1\n  \nb,2\n").unwrap();
         assert_eq!(data.labels, ["a", "b"]);
@@ -148,8 +182,8 @@ mod tests {
 
     #[test]
     fn invalid_number_is_reported_with_its_line() {
-        let err = parse_str("a,x\n").unwrap_err();
-        assert_eq!(err.to_string(), "invalid data point [x] in line [a,x]");
+        let err = parse_str("a,1\nb,x\n").unwrap_err();
+        assert_eq!(err.to_string(), "invalid data point [x] in line [b,x]");
     }
 
     #[test]

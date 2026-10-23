@@ -35,3 +35,6 @@ install:
 uninstall:
     cargo uninstall termgraph --root ${HOME}/.local
     rm -f ${HOME}/.local/bin/tg
+
+demo:
+    examples/demo.sh

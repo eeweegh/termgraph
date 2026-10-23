@@ -47,9 +47,9 @@ fn missing_file_fails() {
 
 #[test]
 fn invalid_number_fails() {
-    let output = run("a,x\n", &[]);
+    let output = run("a,1\nb,x\n", &[]);
     assert_eq!(output.status.code(), Some(1));
-    assert_eq!(stderr(&output), "termgraph: error: invalid data point [x] in line [a,x]\n");
+    assert_eq!(stderr(&output), "termgraph: error: invalid data point [x] in line [b,x]\n");
 }
 
 #[test]

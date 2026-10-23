@@ -3,8 +3,8 @@
 use std::io::Write;
 use std::process::{Command, Output, Stdio};
 
-pub const MULTI: &str = "@,Boys,Girls\n2007,183,202\n2008,231,199\n2009,0.3,5\n";
-pub const SINGLE: &str = "@,Boys\n2007,183\n2008,231\n2009,0\n";
+pub const MULTI: &str = "year,Boys,Girls\n2007,183,202\n2008,231,199\n2009,0.3,5\n";
+pub const SINGLE: &str = "year,Boys\n2007,183\n2008,231\n2009,0\n";
 
 pub fn run(stdin: &str, args: &[&str]) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_termgraph"))

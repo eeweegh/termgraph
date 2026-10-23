@@ -38,6 +38,11 @@ fn options(cli: &Cli) -> Options {
         format: cli.format.clone(),
         suffix: cli.suffix.clone(),
         title: cli.title.clone().filter(|t| !t.is_empty()),
+        legend: match (cli.legend, cli.no_legend) {
+            (true, _) => Some(true),
+            (_, true) => Some(false),
+            _ => None,
+        },
         stacked: cli.stacked,
         no_labels: cli.no_labels,
         no_values: cli.no_values,
