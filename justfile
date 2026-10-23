@@ -1,3 +1,5 @@
+root := env("HOME") + "/.local"
+
 default: check
 
 check: fmt-check lint test
@@ -27,14 +29,14 @@ man:
     cargo run --quiet -- man
 
 install:
-    cargo install --path . --locked --root ${HOME}/.local
-    mkdir -p ${HOME}/.local/bin
-    ${CARGO_HOME:-$HOME/.cargo}/bin/termgraph tg-script > ${HOME}/.local/bin/tg
-    chmod 755 ${HOME}/.local/bin/tg
+    cargo install --path . --locked --root {{root}}
+    mkdir -p {{root}}/bin
+    {{root}}/bin/termgraph tg-script > {{root}}/bin/tg
+    chmod 755 {{root}}/bin/tg
 
 uninstall:
-    cargo uninstall termgraph --root ${HOME}/.local
-    rm -f ${HOME}/.local/bin/tg
+    cargo uninstall termgraph --root {{root}}
+    rm -f {{root}}/bin/tg
 
 demo:
     examples/demo.sh
