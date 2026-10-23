@@ -27,11 +27,11 @@ man:
     cargo run --quiet -- --man
 
 install:
-    cargo install --path . --locked
+    cargo install --path . --locked --root ${HOME}/.local
     mkdir -p ${HOME}/.local/bin
     ${CARGO_HOME:-$HOME/.cargo}/bin/termgraph --tg-script > ${HOME}/.local/bin/tg
     chmod 755 ${HOME}/.local/bin/tg
 
 uninstall:
-    cargo uninstall termgraph
+    cargo uninstall termgraph --root ${HOME}/.local
     rm -f ${HOME}/.local/bin/tg
