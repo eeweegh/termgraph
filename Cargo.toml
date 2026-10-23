@@ -1,6 +1,6 @@
 [package]
 name = "termgraph"
-version = "2.2.0"
+version = "2.2.1"
 edition = "2024"
 rust-version = "1.88"
 description = "Draw basic bar graphs in the terminal"
