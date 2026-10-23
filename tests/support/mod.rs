@@ -20,7 +20,8 @@ pub fn run(stdin: &str, args: &[&str]) -> Output {
 
 // Escapes are made visible so snapshots stay readable.
 pub fn chart(stdin: &str, args: &[&str]) -> String {
-    let output = run(stdin, args);
+    let args = [&["--colorize", "always"], args].concat();
+    let output = run(stdin, &args);
     assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
     String::from_utf8(output.stdout).unwrap().replace('\x1b', "␛")
 }

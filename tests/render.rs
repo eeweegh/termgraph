@@ -1,7 +1,12 @@
 mod support;
 
 use insta::assert_snapshot;
-use support::{MULTI, SINGLE, chart};
+use support::{MULTI, SINGLE, chart, run};
+
+// Piped output carries no escapes unless asked for.
+fn plain(stdin: &str, args: &[&str]) -> String {
+    String::from_utf8(run(stdin, args).stdout).unwrap()
+}
 
 const NEGATIVE: &str = "a,-5,3\nb,10,2\nc,0,1\n";
 const LARGE: &str = "x,12550\ny,19561100\nz,999\n";
@@ -88,4 +93,19 @@ fn at_header_is_still_accepted() {
         chart("@,Boys,Girls\n2007,1,2\n", &["--width", "20"]),
         chart("year,Boys,Girls\n2007,1,2\n", &["--width", "20"])
     );
+}
+
+#[test]
+fn wide_labels_align_by_display_width() {
+    let out = plain("日本語,1\nab,2\n", &["--width", "10"]);
+    let bars: Vec<usize> = out.lines().filter(|l| l.contains('⣿')).map(|l| l.find('⣿').unwrap()).collect();
+    // 日本語 is 6 columns wide (9 bytes); "ab" needs 4 spaces of padding to line up.
+    assert_eq!(bars[0], 9 + 1);
+    assert_eq!(bars[1], 2 + 4 + 1);
+}
+
+#[test]
+fn apostrophes_in_names_keep_the_legend() {
+    let out = plain("year,Men's,Women's\n2007,1,2\n", &[]);
+    assert!(out.contains("Men's") && out.contains("Women's"));
 }

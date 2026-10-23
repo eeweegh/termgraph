@@ -7,8 +7,8 @@ printf 'year,Boys,Girls\n2007,183,202\n2008,231,199\n' | termgraph --stacked
 termgraph data.csv --width 40 --color blue red
 ```
 
-Input is a file or stdin: plain CSV with an optional header (`year,Cat1,Cat2`; the first column name is ignored, a leading `@` also works), then `label,value[,value...]` rows; `#` lines and blank lines are skipped. Columns split on the delimiter (outside quotes), else on whitespace.
-Empty input, or a bare invocation on a terminal, exits silently with status 0. Errors go to stderr as `termgraph: error: ...` with status 1.
+Input is a file or stdin: plain CSV with an optional header (`year,Cat1,Cat2`; the first column name is ignored, a leading `@` also works; `--header` / `--no-header` override the detection, needed for numeric names like `2020,2021`), then `label,value[,value...]` rows; `#` lines and blank lines are skipped. It is plain csv: fields may be `"quoted"`, and `--delim` sets another single-character delimiter (`\t` for tab).
+Values must be finite numbers, and the header must name as many categories as the rows have values. Colors are only emitted on a terminal and without `NO_COLOR` (`--colorize auto|always|never`). Empty input, or a bare invocation on a terminal, exits silently with status 0. Errors go to stderr as `termgraph: error: ...` with status 1.
 
 `termgraph --help` lists every option. `--format` takes one printf conversion (`%5.2f`, `%.1f%%`, `%d`), not a Python format spec.
 
@@ -16,7 +16,7 @@ Empty input, or a bare invocation on a terminal, exits silently with status 0. E
 
 ```
 cargo install --git https://github.com/eeweegh/termgraph
-termgraph --tg-script > ~/.local/bin/tg && chmod 755 ~/.local/bin/tg
+termgraph tg-script > ~/.local/bin/tg && chmod 755 ~/.local/bin/tg
 ```
 
 ## Layout of the code
@@ -37,4 +37,6 @@ just check      # fmt, clippy -D warnings, tests
 
 Tests: unit tests per module, `tests/cli.rs` (exit codes, stderr, empty input) and `tests/render.rs` (insta snapshots of the binary's output, escapes made visible).
 
-The version lives in `Cargo.toml`. Shell completions and the man page are generated: `termgraph --completions zsh`, `termgraph --man`.
+`termgraph colors`, `tg-script`, `completions <shell>` and `man` are subcommands (they replace the old `--colors`, `--tg-script`, `--completions` and `--man` flags). A file named like a subcommand needs a path (`./man`).
+
+The version lives in `Cargo.toml`. Shell completions and the man page are generated: `termgraph completions zsh`, `termgraph man`.

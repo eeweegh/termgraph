@@ -125,13 +125,14 @@ fn split_literal(s: &str) -> (String, Option<&str>) {
 /// Scales to K/M/B/T, rounded to three decimals, so 12550 becomes (12.55, "K").
 pub fn readable(value: f64) -> (f64, &'static str) {
     const UNITS: [&str; 5] = ["", "K", "M", "B", "T"];
-    let abs = value.abs();
-    let mut index = 0;
-    while index < UNITS.len() - 1 && abs >= 1000f64.powi(index as i32 + 1) {
+    let round = |v: f64| (v * 1000.0).round() / 1000.0;
+    let (mut scaled, mut index) = (value.abs(), 0);
+    // Rounding first, so 999.9996 becomes 1 K rather than 1000.
+    while index < UNITS.len() - 1 && round(scaled) >= 1000.0 {
+        scaled /= 1000.0;
         index += 1;
     }
-    let scaled = abs / 1000f64.powi(index as i32);
-    let rounded = format!("{scaled:.3}").parse().unwrap_or(scaled);
+    let rounded = round(scaled);
     (if value < 0.0 { -rounded } else { rounded }, UNITS[index])
 }
 
@@ -185,5 +186,7 @@ mod tests {
         assert_eq!(readable(0.0), (0.0, ""));
         assert_eq!(readable(0.5), (0.5, ""));
         assert_eq!(readable(5e15), (5000.0, "T"));
+        assert_eq!(readable(999.9996), (1.0, "K"));
+        assert_eq!(readable(999_999.9), (1.0, "M"));
     }
 }

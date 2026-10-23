@@ -21,15 +21,15 @@ build:
     cargo build --release --locked
 
 completions shell="zsh":
-    cargo run --quiet -- --completions {{shell}}
+    cargo run --quiet -- completions {{shell}}
 
 man:
-    cargo run --quiet -- --man
+    cargo run --quiet -- man
 
 install:
     cargo install --path . --locked --root ${HOME}/.local
     mkdir -p ${HOME}/.local/bin
-    ${CARGO_HOME:-$HOME/.cargo}/bin/termgraph --tg-script > ${HOME}/.local/bin/tg
+    ${CARGO_HOME:-$HOME/.cargo}/bin/termgraph tg-script > ${HOME}/.local/bin/tg
     chmod 755 ${HOME}/.local/bin/tg
 
 uninstall:

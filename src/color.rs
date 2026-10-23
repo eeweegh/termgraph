@@ -45,7 +45,7 @@ pub struct Fg(pub u8);
 
 impl fmt::Display for Fg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "\x1b[38:5:{}m", self.0)
+        write!(f, "\x1b[38;5;{}m", self.0)
     }
 }
 

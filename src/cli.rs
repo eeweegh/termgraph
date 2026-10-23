@@ -1,5 +1,6 @@
 use crate::format::Format;
-use clap::Parser;
+use crate::input::Header;
+use clap::{Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 use std::path::PathBuf;
 
@@ -8,24 +9,64 @@ Input (file or stdin; empty input exits silently with status 0):
   year,Boys,Girls  optional csv header: names the categories (first column name ignored)
   2007,183,202     label followed by one value per category
   # comment        comment; blank lines are skipped
-  Columns split on the delimiter (outside quotes), else on whitespace.
-  The first line is a header if it has a non-numeric value cell, or starts with @.
+  Plain csv: fields may be \"quoted\"; --delim sets another single-character delimiter.
+  The first line is a header if it has a non-numeric value cell, or starts with @;
+  force it either way with --header / --no-header (e.g. for numeric names like 2020,2021).
   The legend is shown for more than one category (see --legend, --no-legend).
 
 Format (--format): one printf conversion, f or d, with flags - + space 0, width and precision,
 and optional literal text, e.g. %5.2f, %.1f%%, %d. Values are scaled to K/M/B/T before formatting
 (not in --stacked, which formats the row total).
 
-The tg driver script (zsh) is embedded: termgraph --tg-script > ~/.local/bin/tg && chmod 755 ~/.local/bin/tg
+The tg driver script (zsh) is embedded: termgraph tg-script > ~/.local/bin/tg && chmod 755 ~/.local/bin/tg
 
 Examples:
   termgraph data.csv --width 40 --color blue red
   printf 'year,Boys,Girls\\n2007,183,202\\n2008,231,199\\n' | termgraph --stacked";
 
+/// When to emit ANSI color escapes.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+pub enum Colorize {
+    /// On a terminal, unless `NO_COLOR` is set
+    #[default]
+    Auto,
+    Always,
+    Never,
+}
+
 #[derive(Debug, Parser)]
-#[command(name = "termgraph", version, about = "Draw basic bar graphs in the terminal.", after_help = AFTER_HELP)]
+#[command(
+    name = "termgraph",
+    version,
+    about = "Draw basic bar graphs in the terminal.",
+    after_help = AFTER_HELP,
+    args_conflicts_with_subcommands = true
+)]
 pub struct Cli {
-    /// Data file (comma or space separated) [default: stdin]
+    #[command(subcommand)]
+    pub command: Option<Command>,
+    #[command(flatten)]
+    pub chart: ChartArgs,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Command {
+    /// Show the color table
+    Colors,
+    /// Print the tg driver script (zsh)
+    #[command(name = "tg-script")]
+    TgScript,
+    /// Print a shell completion script
+    #[command(hide = true)]
+    Completions { shell: Shell },
+    /// Print the man page (roff)
+    #[command(hide = true)]
+    Man,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct ChartArgs {
+    /// Data file (csv) [default: stdin]
     pub file: Option<PathBuf>,
     /// Title printed above the graph
     #[arg(long)]
@@ -48,9 +89,18 @@ pub struct Cli {
     /// Print an empty line between rows
     #[arg(long)]
     pub space_between: bool,
-    /// Bar color per category, by name or 8-bit number (see --colors)
+    /// Bar color per category, by name or 8-bit number (see the colors subcommand)
     #[arg(long, num_args = 1.., value_name = "COLOR")]
     pub color: Vec<String>,
+    /// Treat the first line as a header (names the categories)
+    #[arg(long, conflicts_with = "no_header")]
+    pub header: bool,
+    /// Treat the first line as data
+    #[arg(long)]
+    pub no_header: bool,
+    /// When to use ANSI colors in the output
+    #[arg(long, value_enum, default_value_t)]
+    pub colorize: Colorize,
     /// Always show the legend, even for a single category
     #[arg(long, conflicts_with = "no_legend")]
     pub legend: bool,
@@ -63,22 +113,70 @@ pub struct Cli {
     /// Custom tick character, emoji approved
     #[arg(long, value_name = "TICK")]
     pub custom_tick: Option<String>,
-    /// Custom delimiter [default: , or whitespace]
-    #[arg(long)]
-    pub delim: Option<String>,
+    /// Field delimiter: one ASCII character, or \t for a tab
+    #[arg(long, default_value = ",", value_parser = parse_delim)]
+    pub delim: u8,
     /// Show the value before the bar
     #[arg(long)]
     pub label_before: bool,
-    /// Show the color table and exit
-    #[arg(long)]
-    pub colors: bool,
-    /// Print the tg driver script (zsh) and exit
-    #[arg(long)]
-    pub tg_script: bool,
-    /// Print a shell completion script and exit
-    #[arg(long, value_name = "SHELL", hide = true)]
-    pub completions: Option<Shell>,
-    /// Print the man page (roff) and exit
-    #[arg(long, hide = true)]
-    pub man: bool,
+}
+
+impl ChartArgs {
+    pub fn header(&self) -> Header {
+        match (self.header, self.no_header) {
+            (true, _) => Header::Always,
+            (_, true) => Header::Never,
+            _ => Header::Auto,
+        }
+    }
+
+    /// `None` leaves it to the number of categories.
+    pub fn legend(&self) -> Option<bool> {
+        match (self.legend, self.no_legend) {
+            (true, _) => Some(true),
+            (_, true) => Some(false),
+            _ => None,
+        }
+    }
+}
+
+impl Colorize {
+    /// `terminal`: stdout is a terminal. `no_color`: `NO_COLOR` is set to a non-empty value (<https://no-color.org>).
+    pub fn enabled(self, terminal: bool, no_color: bool) -> bool {
+        match self {
+            Self::Always => true,
+            Self::Never => false,
+            Self::Auto => terminal && !no_color,
+        }
+    }
+}
+
+fn parse_delim(s: &str) -> Result<u8, String> {
+    match s.as_bytes() {
+        b"\\t" => Ok(b'\t'),
+        [byte] if byte.is_ascii() => Ok(*byte),
+        _ => Err(format!("'{s}' is not a single ASCII character")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn delimiters() {
+        assert_eq!(parse_delim(";"), Ok(b';'));
+        assert_eq!(parse_delim("\\t"), Ok(b'\t'));
+        assert_eq!(parse_delim("\t"), Ok(b'\t'));
+        assert!(parse_delim("").is_err() && parse_delim(";;").is_err() && parse_delim("é").is_err());
+    }
+
+    #[test]
+    fn colorize_modes() {
+        assert!(Colorize::Auto.enabled(true, false));
+        assert!(!Colorize::Auto.enabled(false, false));
+        assert!(!Colorize::Auto.enabled(true, true));
+        assert!(Colorize::Always.enabled(false, true));
+        assert!(!Colorize::Never.enabled(true, false));
+    }
 }

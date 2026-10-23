@@ -2,9 +2,9 @@
 source: tests/render.rs
 expression: "chart(\"@,Alpha,Bravo,Charlie\\nr,1,2,3\\n\", &[\"--width\", \"12\"])"
 ---
-␛[38:5:2m⣿ Alpha ␛[0m␛[38:5:1m⣿ Bravo ␛[0m
-␛[38:5:3m⣿ Charlie ␛[0m
+␛[38;5;2m⣿ Alpha ␛[0m␛[38;5;1m⣿ Bravo ␛[0m
+␛[38;5;3m⣿ Charlie ␛[0m
 
-␛[0mr ␛[0m␛[38:5:2m⣿⣿␛[0m 1.00 
-  ␛[0m␛[38:5:1m⣿⣿⣿⣿␛[0m 2.00 
-  ␛[0m␛[38:5:3m⣿⣿⣿⣿⣿⣿␛[0m 3.00
+␛[0mr ␛[0m␛[38;5;2m⣿⣿␛[0m 1.00 
+  ␛[0m␛[38;5;1m⣿⣿⣿⣿␛[0m 2.00 
+  ␛[0m␛[38;5;3m⣿⣿⣿⣿⣿⣿␛[0m 3.00

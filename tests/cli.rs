@@ -91,7 +91,7 @@ fn version_comes_from_cargo() {
 
 #[test]
 fn color_table_has_32_rows() {
-    let output = run("", &["--colors"]);
+    let output = run("", &["colors"]);
     assert!(output.status.success());
     assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 32);
 }
@@ -115,9 +115,82 @@ fn closed_pipe_is_not_an_error() {
 
 #[test]
 fn tg_script_matches_bin_tg() {
-    let output = run("", &["--tg-script"]);
+    let output = run("", &["tg-script"]);
     let script = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/bin/tg")).unwrap();
     assert!(output.status.success() && output.stderr.is_empty());
     assert_eq!(String::from_utf8_lossy(&output.stdout), script);
     assert!(script.starts_with("#!/usr/bin/env zsh\n"));
+}
+
+#[test]
+fn escapes_are_off_when_piped_unless_forced() {
+    assert!(!String::from_utf8_lossy(&run(MULTI, &[]).stdout).contains('\x1b'));
+    assert!(!String::from_utf8_lossy(&run(MULTI, &["--colorize", "never"]).stdout).contains('\x1b'));
+    assert!(String::from_utf8_lossy(&run(MULTI, &["--colorize", "always"]).stdout).contains("\x1b[38;5;2m"));
+}
+
+#[test]
+fn numeric_header_can_be_forced() {
+    let text = "x,2020,2021\na,1,2\n";
+    let stdout = |args: &[&str]| String::from_utf8_lossy(&run(text, args).stdout).into_owned();
+    // Automatic detection sees only numbers, so the first line is a row labelled x.
+    assert!(stdout(&[]).lines().any(|l| l.starts_with("x ")));
+    let forced = stdout(&["--header"]);
+    assert!(forced.contains("2020") && !forced.lines().any(|l| l.starts_with("x ")));
+    assert_eq!(run("x,a\n", &["--no-header"]).status.code(), Some(1));
+    assert_eq!(run(text, &["--header", "--no-header"]).status.code(), Some(2));
+}
+
+#[test]
+fn header_width_mismatch_fails() {
+    let output = run("x,a,b,c\nr,1,2\n", &[]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(stderr(&output).contains("header has 3 names, rows have 2 values"));
+}
+
+#[test]
+fn non_finite_values_fail() {
+    assert_eq!(run("a,1\nb,nan\n", &[]).status.code(), Some(1));
+}
+
+#[test]
+fn subcommands_print_and_old_flags_are_gone() {
+    for sub in ["tg-script", "colors", "man"] {
+        let output = run("", &[sub]);
+        assert!(output.status.success() && !output.stdout.is_empty(), "{sub}");
+        assert_eq!(run("", &[&format!("--{sub}")]).status.code(), Some(2), "--{sub}");
+    }
+    let zsh = run("", &["completions", "zsh"]);
+    assert!(String::from_utf8_lossy(&zsh.stdout).starts_with("#compdef termgraph"));
+}
+
+#[test]
+fn delimiter_must_be_one_ascii_character() {
+    let tab = run("a\t1\n", &["--delim", "\\t", "--colorize", "never"]);
+    assert!(tab.status.success() && String::from_utf8_lossy(&tab.stdout).contains("a "));
+    let output = run("a;;1\n", &["--delim", ";;"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stderr(&output).contains("not a single ASCII character"));
+}
+
+#[test]
+fn whitespace_is_not_a_delimiter() {
+    let output = run("a 1 2\n", &[]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(stderr(&output).contains("label [a 1 2] has no values"));
+}
+
+#[test]
+fn non_utf8_input_fails_cleanly() {
+    use std::io::Write;
+    let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_termgraph"))
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(b"a,1\n\xff,2\n").unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(stderr(&output).starts_with("termgraph: error: could not read input"));
 }
