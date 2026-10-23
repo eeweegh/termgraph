@@ -7,6 +7,11 @@
 
 set -o errexit; set -o nounset; set -o pipefail
 
+# not going to a terminal, just passthrough csv
+if [[ ! -t 1 ]]; then
+   exec cat
+fi
+
 # default width is 2/3 of the terminal
 width=$(($(tput cols) * 2 / 3))
 
