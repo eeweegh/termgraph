@@ -17,7 +17,7 @@ width=$(($(tput cols) * 2 / 3))
 
 # stacked is default, unless overruled in env var (parameters are termgraph's)
 if [[ -v TGNOSTACK ]]; then
-   termgraph --width ${width} "${@}"
+   termgraph plot --width ${width} "${@}"
 else
-   termgraph --stacked --width ${width} "${@}"
+   termgraph plot --stacked --width ${width} "${@}"
 fi

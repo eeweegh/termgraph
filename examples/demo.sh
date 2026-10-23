@@ -20,10 +20,10 @@ bare=$'a,3\nb,7\nc,5'
 mixed=$'region,q1,q2,q3\nnorth,-20,40,65\nsouth,35,-10,50\neast,80,90,-30\nwest,12,12,12'
 
 show "plain csv, one series: no legend, header is just a header" \
-   'print -r -- $single | termgraph --color green --width 40'
+   'print -r -- $single | termgraph plot --color green --width 40'
 
 show "several series, grouped" \
-   'print -r -- $births | termgraph --width 40'
+   'print -r -- $births | termgraph plot --width 40'
 
 show "tg: stacked, sized to the terminal" \
    'print -r -- $births | tg'
@@ -38,13 +38,13 @@ show "negative values" \
    'print -r -- $mixed | tg'
 
 show "big numbers get K/M/B scaling" \
-   'print -r -- $cities | termgraph --width 40 --color yellow'
+   'print -r -- $cities | termgraph plot --width 40 --color yellow'
 
 show "legend on request for a single series" \
-   'print -r -- $single | termgraph --legend --width 40'
+   'print -r -- $single | termgraph plot --legend --width 40'
 
 show "custom tick" \
-   'print -r -- $single | termgraph --custom-tick 🔥 --width 30'
+   'print -r -- $single | termgraph plot --custom-tick 🔥 --width 30'
 
 show "headerless input still works" \
-   'print -r -- $bare | termgraph --width 30 --color red'
+   'print -r -- $bare | termgraph plot --width 30 --color red'

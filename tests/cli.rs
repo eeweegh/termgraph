@@ -1,7 +1,7 @@
 mod support;
 
 use std::io::Write;
-use support::{MULTI, SINGLE, run};
+use support::{MULTI, SINGLE, plot, run};
 
 fn stderr(output: &std::process::Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
@@ -10,7 +10,7 @@ fn stderr(output: &std::process::Output) -> String {
 #[test]
 fn empty_stdin_exits_silently() {
     for input in ["", "\n  \n", "# only a comment\n", "@,Boys\n"] {
-        let output = run(input, &[]);
+        let output = plot(input, &[]);
         assert_eq!(output.status.code(), Some(0), "{input:?}");
         assert!(output.stdout.is_empty() && output.stderr.is_empty(), "{input:?}");
     }
@@ -18,7 +18,7 @@ fn empty_stdin_exits_silently() {
 
 #[test]
 fn empty_input_prints_no_title() {
-    let output = run("", &["--title", "T"]);
+    let output = plot("", &["--title", "T"]);
     assert!(output.status.success() && output.stdout.is_empty());
 }
 
@@ -26,7 +26,7 @@ fn empty_input_prints_no_title() {
 fn reads_a_file() {
     let mut file = tempfile::NamedTempFile::new().unwrap();
     file.write_all(SINGLE.as_bytes()).unwrap();
-    let output = run("", &[file.path().to_str().unwrap()]);
+    let output = plot("", &[file.path().to_str().unwrap()]);
     assert!(output.status.success());
     assert!(String::from_utf8_lossy(&output.stdout).contains("2008"));
 }
@@ -34,48 +34,48 @@ fn reads_a_file() {
 #[test]
 fn empty_file_exits_silently() {
     let file = tempfile::NamedTempFile::new().unwrap();
-    let output = run("", &[file.path().to_str().unwrap()]);
+    let output = plot("", &[file.path().to_str().unwrap()]);
     assert!(output.status.success() && output.stdout.is_empty());
 }
 
 #[test]
 fn missing_file_fails() {
-    let output = run("", &["/nonexistent/data.csv"]);
+    let output = plot("", &["/nonexistent/data.csv"]);
     assert_eq!(output.status.code(), Some(1));
     assert!(stderr(&output).starts_with("termgraph: error: could not read /nonexistent/data.csv"));
 }
 
 #[test]
 fn invalid_number_fails() {
-    let output = run("a,1\nb,x\n", &[]);
+    let output = plot("a,1\nb,x\n", &[]);
     assert_eq!(output.status.code(), Some(1));
     assert_eq!(stderr(&output), "termgraph: error: invalid data point [x] in line [b,x]\n");
 }
 
 #[test]
 fn ragged_rows_fail() {
-    let output = run("a,1,2\nb,3\n", &[]);
+    let output = plot("a,1,2\nb,3\n", &[]);
     assert_eq!(output.status.code(), Some(1));
     assert!(stderr(&output).contains("label [b] has 1 values, expected 2"));
 }
 
 #[test]
 fn wrong_color_count_fails() {
-    let output = run(MULTI, &["--color", "red"]);
+    let output = plot(MULTI, &["--color", "red"]);
     assert_eq!(output.status.code(), Some(1));
     assert!(stderr(&output).contains("color (1) and category (2)"));
 }
 
 #[test]
 fn unknown_color_lists_choices() {
-    let output = run(SINGLE, &["--color", "pink"]);
+    let output = plot(SINGLE, &["--color", "pink"]);
     assert_eq!(output.status.code(), Some(1));
     assert!(stderr(&output).contains("invalid color pink, choose from green, red, yellow"));
 }
 
 #[test]
 fn invalid_format_is_a_usage_error() {
-    let output = run(SINGLE, &["--format", "{:>8.1f}"]);
+    let output = plot(SINGLE, &["--format", "{:>8.1f}"]);
     assert_eq!(output.status.code(), Some(2));
     assert!(stderr(&output).contains("has no conversion, expected e.g. %5.2f"));
 }
@@ -100,6 +100,7 @@ fn color_table_has_32_rows() {
 fn closed_pipe_is_not_an_error() {
     let rows = "row,1\n".repeat(20_000);
     let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_termgraph"))
+        .arg("plot")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
@@ -124,33 +125,33 @@ fn tg_script_matches_bin_tg() {
 
 #[test]
 fn escapes_are_off_when_piped_unless_forced() {
-    assert!(!String::from_utf8_lossy(&run(MULTI, &[]).stdout).contains('\x1b'));
-    assert!(!String::from_utf8_lossy(&run(MULTI, &["--colorize", "never"]).stdout).contains('\x1b'));
-    assert!(String::from_utf8_lossy(&run(MULTI, &["--colorize", "always"]).stdout).contains("\x1b[38;5;2m"));
+    assert!(!String::from_utf8_lossy(&plot(MULTI, &[]).stdout).contains('\x1b'));
+    assert!(!String::from_utf8_lossy(&plot(MULTI, &["--colorize", "never"]).stdout).contains('\x1b'));
+    assert!(String::from_utf8_lossy(&plot(MULTI, &["--colorize", "always"]).stdout).contains("\x1b[38;5;2m"));
 }
 
 #[test]
 fn numeric_header_can_be_forced() {
     let text = "x,2020,2021\na,1,2\n";
-    let stdout = |args: &[&str]| String::from_utf8_lossy(&run(text, args).stdout).into_owned();
+    let stdout = |args: &[&str]| String::from_utf8_lossy(&plot(text, args).stdout).into_owned();
     // Automatic detection sees only numbers, so the first line is a row labelled x.
     assert!(stdout(&[]).lines().any(|l| l.starts_with("x ")));
     let forced = stdout(&["--header"]);
     assert!(forced.contains("2020") && !forced.lines().any(|l| l.starts_with("x ")));
-    assert_eq!(run("x,a\n", &["--no-header"]).status.code(), Some(1));
-    assert_eq!(run(text, &["--header", "--no-header"]).status.code(), Some(2));
+    assert_eq!(plot("x,a\n", &["--no-header"]).status.code(), Some(1));
+    assert_eq!(plot(text, &["--header", "--no-header"]).status.code(), Some(2));
 }
 
 #[test]
 fn header_width_mismatch_fails() {
-    let output = run("x,a,b,c\nr,1,2\n", &[]);
+    let output = plot("x,a,b,c\nr,1,2\n", &[]);
     assert_eq!(output.status.code(), Some(1));
     assert!(stderr(&output).contains("header has 3 names, rows have 2 values"));
 }
 
 #[test]
 fn non_finite_values_fail() {
-    assert_eq!(run("a,1\nb,nan\n", &[]).status.code(), Some(1));
+    assert_eq!(plot("a,1\nb,nan\n", &[]).status.code(), Some(1));
 }
 
 #[test]
@@ -165,17 +166,33 @@ fn subcommands_print_and_old_flags_are_gone() {
 }
 
 #[test]
+fn subcommand_is_required() {
+    let output = run("", &[]);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(run("a,1\n", &["--width", "10"]).status.code(), Some(2));
+}
+
+#[test]
+fn file_named_like_a_subcommand_plots() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("man");
+    std::fs::write(&path, SINGLE).unwrap();
+    let output = plot("", &[path.to_str().unwrap()]);
+    assert!(output.status.success() && !output.stdout.is_empty());
+}
+
+#[test]
 fn delimiter_must_be_one_ascii_character() {
-    let tab = run("a\t1\n", &["--delim", "\\t", "--colorize", "never"]);
+    let tab = plot("a\t1\n", &["--delim", "\\t", "--colorize", "never"]);
     assert!(tab.status.success() && String::from_utf8_lossy(&tab.stdout).contains("a "));
-    let output = run("a;;1\n", &["--delim", ";;"]);
+    let output = plot("a;;1\n", &["--delim", ";;"]);
     assert_eq!(output.status.code(), Some(2));
     assert!(stderr(&output).contains("not a single ASCII character"));
 }
 
 #[test]
 fn whitespace_is_not_a_delimiter() {
-    let output = run("a 1 2\n", &[]);
+    let output = plot("a 1 2\n", &[]);
     assert_eq!(output.status.code(), Some(1));
     assert!(stderr(&output).contains("label [a 1 2] has no values"));
 }
@@ -184,6 +201,7 @@ fn whitespace_is_not_a_delimiter() {
 fn non_utf8_input_fails_cleanly() {
     use std::io::Write;
     let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_termgraph"))
+        .arg("plot")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())

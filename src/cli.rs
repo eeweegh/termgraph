@@ -5,6 +5,8 @@ use clap_complete::Shell;
 use std::path::PathBuf;
 
 const AFTER_HELP: &str = "\
+Options: see termgraph plot --help.
+
 Input (file or stdin; empty input exits silently with status 0):
   year,Boys,Girls  optional csv header: names the categories (first column name ignored)
   2007,183,202     label followed by one value per category
@@ -21,8 +23,8 @@ and optional literal text, e.g. %5.2f, %.1f%%, %d. Values are scaled to K/M/B/T 
 The tg driver script (zsh) is embedded: termgraph tg-script > ~/.local/bin/tg && chmod 755 ~/.local/bin/tg
 
 Examples:
-  termgraph data.csv --width 40 --color blue red
-  printf 'year,Boys,Girls\\n2007,183,202\\n2008,231,199\\n' | termgraph --stacked";
+  termgraph plot data.csv --width 40 --color blue red
+  printf 'year,Boys,Girls\\n2007,183,202\\n2008,231,199\\n' | termgraph plot --stacked";
 
 /// When to emit ANSI color escapes.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
@@ -40,17 +42,18 @@ pub enum Colorize {
     version,
     about = "Draw basic bar graphs in the terminal.",
     after_help = AFTER_HELP,
-    args_conflicts_with_subcommands = true
+    subcommand_required = true,
+    arg_required_else_help = true
 )]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Option<Command>,
-    #[command(flatten)]
-    pub chart: ChartArgs,
+    pub command: Command,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Draw a bar graph from csv (file or stdin)
+    Plot(Box<ChartArgs>),
     /// Show the color table
     Colors,
     /// Print the tg driver script (zsh)

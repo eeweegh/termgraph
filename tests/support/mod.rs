@@ -6,6 +6,10 @@ use std::process::{Command, Output, Stdio};
 pub const MULTI: &str = "year,Boys,Girls\n2007,183,202\n2008,231,199\n2009,0.3,5\n";
 pub const SINGLE: &str = "year,Boys\n2007,183\n2008,231\n2009,0\n";
 
+pub fn plot(stdin: &str, args: &[&str]) -> Output {
+    run(stdin, &[&["plot"], args].concat())
+}
+
 pub fn run(stdin: &str, args: &[&str]) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_termgraph"))
         .args(args)
@@ -20,8 +24,7 @@ pub fn run(stdin: &str, args: &[&str]) -> Output {
 
 // Escapes are made visible so snapshots stay readable.
 pub fn chart(stdin: &str, args: &[&str]) -> String {
-    let args = [&["--colorize", "always"], args].concat();
-    let output = run(stdin, &args);
+    let output = plot(stdin, &[&["--colorize", "always"], args].concat());
     assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
     String::from_utf8(output.stdout).unwrap().replace('\x1b', "␛")
 }

@@ -1,11 +1,11 @@
 mod support;
 
 use insta::assert_snapshot;
-use support::{MULTI, SINGLE, chart, run};
+use support::{MULTI, SINGLE, chart, plot};
 
 // Piped output carries no escapes unless asked for.
 fn plain(stdin: &str, args: &[&str]) -> String {
-    String::from_utf8(run(stdin, args).stdout).unwrap()
+    String::from_utf8(plot(stdin, args).stdout).unwrap()
 }
 
 const NEGATIVE: &str = "a,-5,3\nb,10,2\nc,0,1\n";

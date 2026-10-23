@@ -33,14 +33,14 @@ fn main() -> ExitCode {
 
 fn run(cli: &Cli, out: &mut impl Write) -> Result<(), Error> {
     let result = match &cli.command {
-        Some(Command::Colors) => color::write_table(out),
-        Some(Command::TgScript) => generate::tg_script(out),
-        Some(Command::Completions { shell }) => {
+        Command::Plot(args) => return chart(args, out),
+        Command::Colors => color::write_table(out),
+        Command::TgScript => generate::tg_script(out),
+        Command::Completions { shell } => {
             generate::completions(*shell, out);
             Ok(())
         }
-        Some(Command::Man) => generate::man_page(out),
-        None => return chart(&cli.chart, out),
+        Command::Man => generate::man_page(out),
     };
     finish(result.and_then(|()| out.flush()))
 }
