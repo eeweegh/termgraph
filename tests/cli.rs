@@ -163,6 +163,11 @@ fn subcommands_print_and_old_flags_are_gone() {
     }
     let zsh = run("", &["completions", "zsh"]);
     assert!(String::from_utf8_lossy(&zsh.stdout).starts_with("#compdef termgraph"));
+    for shell in ["bash", "fish"] {
+        assert!(!run("", &["completions", shell]).stdout.is_empty(), "{shell}");
+    }
+    let help = run("", &["--help"]);
+    assert!(String::from_utf8_lossy(&help.stdout).contains("completions"));
 }
 
 #[test]

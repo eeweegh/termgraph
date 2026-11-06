@@ -1,6 +1,6 @@
 use crate::format::Format;
 use crate::input::Header;
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum, ValueHint};
 use clap_complete::Shell;
 use std::path::PathBuf;
 
@@ -14,13 +14,16 @@ Input (file or stdin; empty input exits silently with status 0):
   Plain csv: fields may be \"quoted\"; --delim sets another single-character delimiter.
   The first line is a header if it has a non-numeric value cell, or starts with @;
   force it either way with --header / --no-header (e.g. for numeric names like 2020,2021).
-  The legend is shown for more than one category (see --legend, --no-legend).
+  The legend is shown for more than one category; --legend forces it for a single category
+  (a two-column file), --no-legend hides it.
 
 Format (--format): one printf conversion, f or d, with flags - + space 0, width and precision,
 and optional literal text, e.g. %5.2f, %.1f%%, %d. Values are scaled to K/M/B/T before formatting
 (not in --stacked, which formats the row total).
 
 The tg driver script (zsh) is embedded: termgraph tg-script > ~/.local/bin/tg && chmod 755 ~/.local/bin/tg
+
+Shell completions: termgraph completions <bash|zsh|fish|elvish|powershell>
 
 Examples:
   termgraph plot data.csv --width 40 --color blue red
@@ -60,8 +63,10 @@ pub enum Command {
     #[command(name = "tg-script")]
     TgScript,
     /// Print a shell completion script
-    #[command(hide = true)]
-    Completions { shell: Shell },
+    Completions {
+        /// Shell to generate completions for
+        shell: Shell,
+    },
     /// Print the man page (roff)
     #[command(hide = true)]
     Man,
@@ -70,6 +75,7 @@ pub enum Command {
 #[derive(Debug, clap::Args)]
 pub struct ChartArgs {
     /// Data file (csv) [default: stdin]
+    #[arg(value_hint = ValueHint::FilePath)]
     pub file: Option<PathBuf>,
     /// Title printed above the graph
     #[arg(long)]

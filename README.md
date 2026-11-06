@@ -40,3 +40,13 @@ Tests: unit tests per module, `tests/cli.rs` (exit codes, stderr, empty input) a
 `termgraph plot`, `colors`, `tg-script`, `completions <shell>` and `man` are the subcommands; one is always required (plotting used to be the default, and `colors` etc. were flags).
 
 The version lives in `Cargo.toml`. Shell completions and the man page are generated: `termgraph completions zsh`, `termgraph man`.
+
+Install completions, for example:
+
+```
+termgraph completions zsh  > ~/.zsh/completions/_termgraph        # dir must be on $fpath
+termgraph completions bash > ~/.local/share/bash-completion/completions/termgraph
+termgraph completions fish > ~/.config/fish/completions/termgraph.fish
+```
+
+A file with a single category (two columns, e.g. `year,Boys`) shows no legend by default; use `termgraph plot --legend` to force it.
