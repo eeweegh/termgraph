@@ -5,7 +5,7 @@ use clap_complete::Shell;
 use std::path::PathBuf;
 
 const AFTER_HELP: &str = "\
-Options: see termgraph plot --help.
+Options: see termgraph plot --help. A later option overrides an earlier one.
 
 Input (file or stdin; empty input exits silently with status 0):
   year,Boys,Girls  optional csv header: names the categories (first column name ignored)
@@ -73,6 +73,7 @@ pub enum Command {
 }
 
 #[derive(Debug, clap::Args)]
+#[command(args_override_self = true)]
 pub struct ChartArgs {
     /// Data file (csv) [default: stdin]
     #[arg(value_hint = ValueHint::FilePath)]
@@ -99,22 +100,22 @@ pub struct ChartArgs {
     #[arg(long)]
     pub space_between: bool,
     /// Bar color per category, by name or 8-bit number (see the colors subcommand)
-    #[arg(long, num_args = 1.., value_name = "COLOR")]
+    #[arg(long, num_args = 1.., value_name = "COLOR", action = clap::ArgAction::Set)]
     pub color: Vec<String>,
     /// Treat the first line as a header (names the categories)
-    #[arg(long, conflicts_with = "no_header")]
+    #[arg(long, overrides_with = "no_header")]
     pub header: bool,
     /// Treat the first line as data
-    #[arg(long)]
+    #[arg(long, overrides_with = "header")]
     pub no_header: bool,
     /// When to use ANSI colors in the output
     #[arg(long, value_enum, default_value_t)]
     pub colorize: Colorize,
     /// Always show the legend, even for a single category
-    #[arg(long, conflicts_with = "no_legend")]
+    #[arg(long, overrides_with = "no_legend")]
     pub legend: bool,
     /// Never show the legend
-    #[arg(long)]
+    #[arg(long, overrides_with = "legend")]
     pub no_legend: bool,
     /// Draw one stacked bar per row
     #[arg(long)]

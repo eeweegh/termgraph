@@ -139,7 +139,9 @@ fn numeric_header_can_be_forced() {
     let forced = stdout(&["--header"]);
     assert!(forced.contains("2020") && !forced.lines().any(|l| l.starts_with("x ")));
     assert_eq!(plot("x,a\n", &["--no-header"]).status.code(), Some(1));
-    assert_eq!(plot(text, &["--header", "--no-header"]).status.code(), Some(2));
+    // The later of two opposing flags wins.
+    assert_eq!(stdout(&["--header", "--no-header"]), stdout(&[]));
+    assert_eq!(stdout(&["--no-header", "--header"]), forced);
 }
 
 #[test]
@@ -216,4 +218,26 @@ fn non_utf8_input_fails_cleanly() {
     let output = child.wait_with_output().unwrap();
     assert_eq!(output.status.code(), Some(1));
     assert!(stderr(&output).starts_with("termgraph: error: could not read input"));
+}
+
+fn stdout_of(args: &[&str]) -> String {
+    let output = plot(MULTI, args);
+    assert!(output.status.success(), "{}", stderr(&output));
+    String::from_utf8(output.stdout).unwrap()
+}
+
+#[test]
+fn later_options_override_earlier_ones() {
+    assert_eq!(stdout_of(&["--width", "10", "--width", "30"]), stdout_of(&["--width", "30"]));
+    assert_eq!(
+        stdout_of(&["--color", "red", "blue", "--color", "green", "yellow"]),
+        stdout_of(&["--color", "green", "yellow"])
+    );
+    assert_eq!(stdout_of(&["--stacked", "--stacked"]), stdout_of(&["--stacked"]));
+}
+
+#[test]
+fn last_of_opposing_flags_wins() {
+    assert_eq!(stdout_of(&["--legend", "--no-legend"]), stdout_of(&["--no-legend"]));
+    assert_eq!(stdout_of(&["--no-legend", "--legend"]), stdout_of(&["--legend"]));
 }
