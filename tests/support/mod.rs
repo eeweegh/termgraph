@@ -18,7 +18,7 @@ pub fn run(stdin: &str, args: &[&str]) -> Output {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    child.stdin.take().unwrap().write_all(stdin.as_bytes()).unwrap();
+    let _ = child.stdin.take().unwrap().write_all(stdin.as_bytes()); // the child may exit without reading (bad arguments)
     child.wait_with_output().unwrap()
 }
 
