@@ -3,6 +3,7 @@
 #
 # tg: terminal graph driver
 # reads csv from stdin and displays a graph in terminal using termgraph
+# the legend is on by default, except for a two-column file whose second column is "count"
 #
 
 set -o errexit; set -o nounset; set -o pipefail
@@ -15,9 +16,34 @@ fi
 # default width is 2/3 of the terminal
 width=$(($(tput cols) * 2 / 3))
 
+# prints the delimiter given with --delim (or --delim=X) in the parameters, default comma;
+# the last one wins, and \t means a tab, like termgraph does
+delimiter() {
+   local delim=, arg
+   while (( $# )); do
+      arg=$1; shift
+      case ${arg} in
+         --delim=*) delim=${arg#--delim=} ;;
+         --delim)   (( $# )) && { delim=$1; shift } ;;
+      esac
+   done
+   [[ ${delim} == '\t' ]] && delim=$'\t'
+   print -rn -- "${delim}"
+}
+
+# legend is default, but pointless for a lone "count" column (peek at the header; a trailing
+# --legend/--no-legend in the parameters still wins)
+IFS= read -r header || true
+delim=$(delimiter "${@}")
+fields=("${(@ps:$delim:)header}")
+legend=--legend
+if (( ${#fields} == 2 )) && [[ ${${(L)fields[2]}//[[:space:]\"]/} == count ]]; then
+   legend=--no-legend
+fi
+
 # stacked is default, unless overruled in env var (parameters are termgraph's)
 if [[ -v TGNOSTACK ]]; then
-   termgraph plot --header --width ${width} "${@}"
+   { print -r -- "${header}"; cat } | termgraph plot --header ${legend} --width ${width} "${@}"
 else
-   termgraph plot --header --stacked --width ${width} "${@}"
+   { print -r -- "${header}"; cat } | termgraph plot --header --stacked ${legend} --width ${width} "${@}"
 fi

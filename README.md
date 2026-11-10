@@ -56,4 +56,4 @@ termgraph completions bash > ~/.local/share/bash-completion/completions/termgrap
 termgraph completions fish > ~/.config/fish/completions/termgraph.fish
 ```
 
-A file with a single category (two columns, e.g. `year,Boys`) shows no legend by default; use `termgraph plot --legend` to force it.
+A file with a single category (two columns, e.g. `year,Boys`) shows no legend by default; use `termgraph plot --legend` to force it. The `bin/tg` wrapper does that by default, except for a two-column file whose second column is `count`; `--legend`/`--no-legend` passed to `tg` still win.
