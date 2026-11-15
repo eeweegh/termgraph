@@ -12,10 +12,10 @@ Values must be finite numbers, and the header must name as many categories as th
 
 `termgraph --help` lists the subcommands, `termgraph plot --help` every option. `--format` takes one printf conversion (`%5.2f`, `%.1f%%`, `%d`), not a Python format spec.
 
-Prebuilt binaries (macOS Apple Silicon, Linux x86_64 static) are attached to each [GitHub release](https://github.com/eeweegh/termgraph/releases):
+Prebuilt binaries (macOS Apple Silicon, Linux x86_64 and aarch64 static) are attached to each [GitHub release](https://github.com/eeweegh/termgraph/releases):
 
 ```
-gh release download --repo eeweegh/termgraph -p '*linux-musl.tar.gz'   # or '*apple-darwin.tar.gz'
+gh release download --repo eeweegh/termgraph -p '*x86_64-unknown-linux-musl.tar.gz'   # or '*aarch64-unknown-linux-musl.tar.gz', '*aarch64-apple-darwin.tar.gz'
 tar xzf termgraph-v*.tar.gz && install termgraph-v*/termgraph ~/.local/bin/
 ```
 
